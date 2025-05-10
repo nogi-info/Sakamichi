@@ -1,0 +1,16 @@
+{
+  "files": {
+    "main.css": "/Sakamichi/static/css/main.f855e6bc.css",
+    "main.js": "/Sakamichi/static/js/main.1545296b.js",
+    "static/js/453.8ab44547.chunk.js": "/Sakamichi/static/js/453.8ab44547.chunk.js",
+    "static/media/logo.svg": "/Sakamichi/static/media/logo.6ce24c58023cc2f8fd88fe9d219db6c6.svg",
+    "index.html": "/Sakamichi/index.html",
+    "main.f855e6bc.css.map": "/Sakamichi/static/css/main.f855e6bc.css.map",
+    "main.1545296b.js.map": "/Sakamichi/static/js/main.1545296b.js.map",
+    "453.8ab44547.chunk.js.map": "/Sakamichi/static/js/453.8ab44547.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.f855e6bc.css",
+    "static/js/main.1545296b.js"
+  ]
+}
