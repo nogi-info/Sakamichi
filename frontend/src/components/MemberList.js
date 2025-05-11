@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Papa from "papaparse";
+import { FaLink } from "react-icons/fa"; // リンクアイコン用
 
 const groupColors = {
   "乃木坂46": "#812990",
@@ -28,7 +29,7 @@ const calculateAge = (birthDate) => {
 };
 
 // グループごとのリストを生成する関数
-const GroupList = ({ members, groupName, filters }) => {
+const GroupList = ({ members, groupName, filters, links }) => {
   return (
     <ul style={{ listStyle: "none", padding: 0, flex: 1 }}>
       {members
@@ -45,6 +46,12 @@ const GroupList = ({ members, groupName, filters }) => {
         .map((member, index) => {
           const joinPeriod = member.加入期?.match(/\d+/)?.[0] || "1"; // 安全に加入期を取得
           const age = calculateAge(member.生年月日); // 年齢を計算
+
+          // リンク情報を取得
+          const memberLinks = links.find((link) => link.名前 === member.名前) || {};
+          const profileLink = memberLinks.プロフィール;
+          const officialLink = memberLinks.公式HP;
+
           return (
             <li
               key={index}
@@ -88,6 +95,18 @@ const GroupList = ({ members, groupName, filters }) => {
                 <div style={{ fontSize: "0.8em", color: "#999", marginTop: "5px" }}>
                   生年月日: {member.生年月日}  ({age}歳) {/* 生年月日と年齢 */}
                 </div>
+                <div style={{ display: "flex", gap: "10px", marginTop: "5px" }}>
+                  {profileLink && (
+                    <a href={profileLink} target="_blank" rel="noopener noreferrer" style={{ color: "#007bff" }}>
+                      <FaLink /> プロフィール
+                    </a>
+                  )}
+                  {officialLink && (
+                    <a href={officialLink} target="_blank" rel="noopener noreferrer" style={{ color: "#007bff" }}>
+                      <FaLink /> 公式HP
+                    </a>
+                  )}
+                </div>
               </div>
             </li>
           );
@@ -100,6 +119,7 @@ const MemberListByYear = () => {
   const [membersByYear, setMembersByYear] = useState({});
   const [filters, setFilters] = useState({});
   const [joinPeriods, setJoinPeriods] = useState({}); // 各グループの加入期リスト
+  const [links, setLinks] = useState([]); // リンク情報を保存
 
   useEffect(() => {
     // CSVファイルを読み込む
@@ -167,6 +187,15 @@ const MemberListByYear = () => {
         });
 
         setMembersByYear(groupedData);
+      },
+    });
+
+    // リンク情報を読み込む
+    Papa.parse("/Sakamichi/data/sakamichi_link.csv", {
+      download: true,
+      header: true,
+      complete: (result) => {
+        setLinks(result.data);
       },
     });
   }, []);
@@ -320,9 +349,9 @@ const MemberListByYear = () => {
               {year}年度生まれ
             </h2>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <GroupList members={membersByYear[year]} groupName="乃木坂46" filters={filters["乃木坂46"]} />
-              <GroupList members={membersByYear[year]} groupName="櫻坂46" filters={filters["櫻坂46"]} />
-              <GroupList members={membersByYear[year]} groupName="日向坂46" filters={filters["日向坂46"]} />
+              <GroupList members={membersByYear[year]} groupName="乃木坂46" filters={filters["乃木坂46"]} links={links} />
+              <GroupList members={membersByYear[year]} groupName="櫻坂46" filters={filters["櫻坂46"]} links={links} />
+              <GroupList members={membersByYear[year]} groupName="日向坂46" filters={filters["日向坂46"]} links={links} />
             </div>
           </div>
         ))}
