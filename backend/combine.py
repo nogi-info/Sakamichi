@@ -11,6 +11,24 @@ processed_data = []
 # 列タイトルの定義
 columns = ["グループ名", "名前", "よみ", "生年月日", "出身地", "血液型", "身長", "加入期", "卒業・辞退・契約終了日", "現在の所属事務所ほか"]
 
+# 漢数字をアラビア数字に変換する関数
+def convert_kanji_to_number(text):
+    kanji_to_number = {
+        "一": "1",
+        "二": "2",
+        "三": "3",
+        "四": "4",
+        "五": "5",
+        "六": "6",
+        "七": "7",
+        "八": "8",
+        "九": "9",
+        "十": "10"
+    }
+    for kanji, number in kanji_to_number.items():
+        text = text.replace(kanji, number)
+    return text
+
 # 各CSVファイルを処理
 for file in csv_files:
     # グループ名をファイル名から取得
@@ -37,7 +55,6 @@ for file in csv_files:
     # 列構造に応じて処理を分岐
     if "卒業・辞退・契約終了日" in df.columns:  # 元メンバーの場合
         df = df[["名前", "よみ", "生年月日", "出身地", "血液型", "身長", "加入期", "卒業・辞退・契約終了日", "現在の所属事務所ほか"]]
-        # df.columns = ["名前", "よみ", "生年月日", "出身地", "血液型", "身長", "加入期", "卒業・辞退・契約終了日", "現在の所属事務所ほか"]
     else:  # 現メンバーの場合
         df = df[["名前", "よみ", "生年月日", "出身地", "血液型", "身長", "加入期"]]
         df["卒業・辞退・契約終了日"] = "-"  # 現メンバーは「-」を設定
@@ -61,6 +78,9 @@ for file in csv_files:
     # 身長列を数値（小数点含む）に変換
     df["身長"] = df["身長"].apply(lambda x: re.search(r"\d+(\.\d+)?", str(x)))
     df["身長"] = df["身長"].apply(lambda x: x.group(0) if x else "-")
+
+    # 加入期列の漢数字をアラビア数字に変換
+    df["加入期"] = df["加入期"].apply(lambda x: convert_kanji_to_number(str(x)))
 
     # 空欄を半角ハイフンに置き換え
     df = df.fillna("-")
