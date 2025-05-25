@@ -1,7 +1,63 @@
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
+
+// --- ここから追加 ---
+// 6面の面名
+const FACE_NAMES = ["front", "back", "right", "left", "top", "bottom"];
+
+// 6面の既定の漢字
+const DEFAULT_FACE_KANJI = "乃木櫻日向坂";
+
+// 1面を3x3に分割したテクスチャ配列を生成
+function createFaceTextures(kanji, faceName, size = 192) {
+  // ルービックキューブ標準色
+  const FACE_COLORS = {
+    front: "#ffffff",   // 白 (Z+)
+    back: "#ffff00",    // 黄 (Z-)
+    right: "#ff0000",   // 赤 (X+)
+    left: "#ff8c00",    // オレンジ (X-)
+    top: "#0000ff",     // 青 (Y+)
+    bottom: "#00ff00"   // 緑 (Y-)
+  };
+
+  // 1面の全体canvasを生成し、中央に漢字を描画
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = FACE_COLORS[faceName] || "#fff"; // ★面ごとに色を付与
+  ctx.fillRect(0, 0, size, size);
+  ctx.font = `${size * 0.7}px serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#222";
+  ctx.fillText(kanji, size / 2, size / 2);
+
+  // 3x3に分割してテクスチャ配列を作成
+  const cell = size / 3;
+  const textures = [];
+  for (let y = 0; y < 3; y++) {
+    for (let x = 0; x < 3; x++) {
+      const cellCanvas = document.createElement("canvas");
+      cellCanvas.width = cell;
+      cellCanvas.height = cell;
+      const cellCtx = cellCanvas.getContext("2d");
+      cellCtx.drawImage(
+        canvas,
+        x * cell, y * cell, cell, cell, // src
+        0, 0, cell, cell                // dst
+      );
+      const texture = new THREE.Texture(cellCanvas);
+      texture.needsUpdate = true;
+      textures.push(texture);
+    }
+  }
+  return textures; // [0,1,2,3,4,5,6,7,8]
+}
+
+// --- ここまで追加 ---
 
 // 6面の色定義
 const FACE_COLORS = {
@@ -19,18 +75,27 @@ function createInitialCubelets() {
   for (let x = -1; x <= 1; x++) {
     for (let y = -1; y <= 1; y++) {
       for (let z = -1; z <= 1; z++) {
-        const colors = {
-          right: x === 1 ? FACE_COLORS.right : "#333333",    // +X
-          left: x === -1 ? FACE_COLORS.left : "#333333",     // -X
-          top: y === 1 ? FACE_COLORS.top : "#333333",        // +Y
-          bottom: y === -1 ? FACE_COLORS.bottom : "#333333", // -Y
-          front: z === 1 ? FACE_COLORS.front : "#333333",    // +Z
-          back: z === -1 ? FACE_COLORS.back : "#333333"      // -Z
+        // 各面のテクスチャインデックスを計算（初期化時のみ）
+        const faceTextureIndices = {
+          right:  x === 1 ? (1 - y) * 3 + (1 - z) : null,
+          left:   x === -1 ? (1 - y) * 3 + (z + 1) : null,
+          top:    y === 1 ? (z + 1) * 3 + (x + 1) : null,
+          bottom: y === -1 ? (1 - z) * 3 + (x + 1) : null,
+          front:  z === 1 ? (1 - y) * 3 + (x + 1) : null,
+          back:   z === -1 ? (1 - y) * 3 + (1 - x) : null,
         };
         cubelets.push({
           id: `${x}_${y}_${z}`,
           position: [x, y, z],
-          colors: colors
+          colors: {
+            right: x === 1 ? "right" : null,
+            left: x === -1 ? "left" : null,
+            top: y === 1 ? "top" : null,
+            bottom: y === -1 ? "bottom" : null,
+            front: z === 1 ? "front" : null,
+            back: z === -1 ? "back" : null,
+          },
+          faceTextureIndices, // ← 初期値のみ
         });
       }
     }
@@ -39,26 +104,24 @@ function createInitialCubelets() {
 }
 
 // 個別のキューブレットコンポーネント
-function Cubelet({ position, colors, onClick, onPointerMove }) {
-  const meshRef = useRef();
+function Cubelet({ position, colors, faceTextureIndices, faceTextures, onClick, onPointerMove }) {
+  if (!colors || !faceTextureIndices) return null;
 
-  // マテリアル配列を作成（Three.jsのボックスジオメトリの面順序に合わせる）
+  const [x, y, z] = position;
   const materials = [
-    new THREE.MeshStandardMaterial({ color: colors.right }),  // +X
-    new THREE.MeshStandardMaterial({ color: colors.left }),   // -X
-    new THREE.MeshStandardMaterial({ color: colors.top }),    // +Y
-    new THREE.MeshStandardMaterial({ color: colors.bottom }), // -Y
-    new THREE.MeshStandardMaterial({ color: colors.front }),  // +Z
-    new THREE.MeshStandardMaterial({ color: colors.back })    // -Z
+    new THREE.MeshStandardMaterial({ map: colors.right ? faceTextures.right[faceTextureIndices.right] : null, color: colors.right ? "#fff" : "#333" }),
+    new THREE.MeshStandardMaterial({ map: colors.left ? faceTextures.left[faceTextureIndices.left] : null, color: colors.left ? "#fff" : "#333" }),
+    new THREE.MeshStandardMaterial({ map: colors.top ? faceTextures.top[faceTextureIndices.top] : null, color: colors.top ? "#fff" : "#333" }),
+    new THREE.MeshStandardMaterial({ map: colors.bottom ? faceTextures.bottom[faceTextureIndices.bottom] : null, color: colors.bottom ? "#fff" : "#333" }),
+    new THREE.MeshStandardMaterial({ map: colors.front ? faceTextures.front[faceTextureIndices.front] : null, color: colors.front ? "#fff" : "#333" }),
+    new THREE.MeshStandardMaterial({ map: colors.back ? faceTextures.back[faceTextureIndices.back] : null, color: colors.back ? "#fff" : "#333" }),
   ];
-
   return (
     <mesh
-      ref={meshRef}
       position={position}
       onPointerDown={onClick}
       onPointerMove={e => {
-        e.stopPropagation(); // 描画されていないオブジェクトでのイベント伝播を防ぐ
+        e.stopPropagation();
         onPointerMove && onPointerMove(e);
       }}
       material={materials}
@@ -69,7 +132,7 @@ function Cubelet({ position, colors, onClick, onPointerMove }) {
 }
 
 // 回転グループコンポーネント
-function RotatingGroup({ cubelets, rotationAxis, rotationAngle }) {
+function RotatingGroup({ cubelets, rotationAxis, rotationAngle, faceTextures }) {
   const groupRef = useRef();
   const rotation = rotationAxis === 'x' ? [rotationAngle, 0, 0] :
                    rotationAxis === 'y' ? [0, rotationAngle, 0] :
@@ -81,7 +144,9 @@ function RotatingGroup({ cubelets, rotationAxis, rotationAngle }) {
         <Cubelet
           key={cubelet.id}
           position={cubelet.position}
-          colors={cubelet.colors}
+          colors={cubelet.colors} // ★追加
+          faceTextureIndices={cubelet.faceTextureIndices} // ★追加
+          faceTextures={faceTextures}
         />
       ))}
     </group>
@@ -101,6 +166,8 @@ function rotateFace(cubelets, axis, layer, clockwise = true) {
 
     let newPosition = [...cubelet.position];
     let newColors = { ...cubelet.colors };
+    // faceTextureIndicesは初期値のまま
+    let newFaceTextureIndices = cubelet.faceTextureIndices;
 
     if (axis === 'x') {
       const newY = Math.round(Math.cos(angle) * y - Math.sin(angle) * z);
@@ -170,7 +237,8 @@ function rotateFace(cubelets, axis, layer, clockwise = true) {
       ...cubelet,
       id: `${newPosition[0]}_${newPosition[1]}_${newPosition[2]}`,
       position: newPosition,
-      colors: newColors
+      colors: newColors,
+      faceTextureIndices: newFaceTextureIndices // ← 変更しない
     };
   });
 }
@@ -178,7 +246,7 @@ function rotateFace(cubelets, axis, layer, clockwise = true) {
 const DRAG_THRESHOLD = 10; // ピクセル、必要に応じて調整
 
 // メインのルービックキューブコンポーネント
-function RubiksCube() {
+function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
   const [cubelets, setCubelets] = useState(createInitialCubelets());
   const [isRotating, setIsRotating] = useState(false);
   const [rotatingCubelets, setRotatingCubelets] = useState([]);
@@ -401,6 +469,17 @@ function RubiksCube() {
     dragStartRef.current._cubeletId = undefined;
   }, []);
 
+  // 6面分のテクスチャ配列を生成（useMemoでキャッシュ）
+  const faceTextures = useMemo(() => {
+    // 乃木櫻日向坂で6面
+    const kanjiArr = faceKanji.slice(0, 6).split("");
+    const textures = {};
+    FACE_NAMES.forEach((face, i) => {
+      textures[face] = createFaceTextures(kanjiArr[i], face); // ★面名を渡す
+    });
+    return textures;
+  }, [faceKanji]);
+
   // 静的なキューブレット（回転中でないもの）
   const staticCubelets = cubelets.filter(cubelet =>
     !rotatingCubelets.some(rc => rc.id === cubelet.id)
@@ -433,7 +512,9 @@ function RubiksCube() {
           <Cubelet
             key={cubelet.id}
             position={cubelet.position}
-            colors={cubelet.colors}
+            colors={cubelet.colors} // ★追加
+            faceTextureIndices={cubelet.faceTextureIndices} // ★追加
+            faceTextures={faceTextures}
             onClick={handleCubeletClick}
             onPointerMove={handlePointerMove}
           />
@@ -445,6 +526,7 @@ function RubiksCube() {
             cubelets={rotatingCubelets}
             rotationAxis={rotationAxis}
             rotationAngle={rotationAngle}
+            faceTextures={faceTextures} // ★追加
           />
         )}
 
