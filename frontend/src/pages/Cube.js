@@ -191,6 +191,15 @@ function rotateFace(cubelets, axis, layer, clockwise = true) {
   });
 }
 
+// --- RubiksCubeコンポーネント内、または外に共通関数を追加 ---
+function rotateAllLayers(cubelets, axis, clockwise = true) {
+  let result = cubelets;
+  [-1, 0, 1].forEach(layer => {
+    result = rotateFace(result, axis, layer, clockwise);
+  });
+  return result;
+}
+
 // メインのルービックキューブコンポーネント
 function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
   const [cubelets, setCubelets] = useState(createInitialCubelets());
@@ -201,6 +210,13 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
   const [rotationLayer, setRotationLayer] = useState(null);
   const [showDebug, setShowDebug] = useState(false);
   const [cameraDistance, setCameraDistance] = useState(5);
+  // --- state追加 ---
+  const [lockPolar, setLockPolar] = useState(false);
+  const [lockedPolar, setLockedPolar] = useState(null); // 追加: 固定時のpolar角を保持
+  const [lockedAzimuth, setLockedAzimuth] = useState(null); // 追加: 固定時のazimuth角を保持
+
+  // --- OrbitControls参照用ref ---
+  const orbitRef = useRef();
 
   // --- カメラ距離をシークバーで直接反映 ---
   const handleSlider = useCallback(e => {
@@ -370,7 +386,10 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
         theta0 = Math.atan2(start[1], start[0]);
         theta1 = Math.atan2(end[1], end[0]);
       }
+      // 差分を -π〜+π の範囲に正規化
       deltaTheta = theta1 - theta0;
+      if (deltaTheta > Math.PI) deltaTheta -= 2 * Math.PI;
+      if (deltaTheta < -Math.PI) deltaTheta += 2 * Math.PI;
       clockwise = deltaTheta < 0;
 
       setRotationAxis(axis);
@@ -464,6 +483,25 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
     setRotationAxis(null);
   };
 
+  // ランダム回転処理
+  const randomRotate = useCallback(async (count = 8, delay = 200) => {
+    const axes = ['x', 'y', 'z'];
+    const layers = [-1, 0, 1];
+    for (let i = 0; i < count; i++) {
+      const axis = axes[Math.floor(Math.random() * axes.length)];
+      const layer = layers[Math.floor(Math.random() * layers.length)];
+      const clockwise = Math.random() < 0.5;
+      setCubelets(prev => rotateFace(prev, axis, layer, clockwise));
+      setIsRotating(false);
+      setRotatingCubelets([]);
+      setRotationAngle(0);
+      setRotationAxis(null);
+      // 少し待つ（アニメーションがあればここで待つ）
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }, []);
+
   return (
     <div
       style={{ width: '100%', height: '800px', background: '#f0f0f0' }}
@@ -534,6 +572,7 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
         )}
 
         <OrbitControls
+          ref={orbitRef}
           enablePan={false}
           enableZoom={true}
           mouseButtons={{
@@ -543,6 +582,11 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
           }}
           minDistance={CAMERA_DISTANCE_MIN}
           maxDistance={CAMERA_DISTANCE_MAX}
+          // Y軸（水平回転）は常に許可、上下（polar）のみ固定
+          minAzimuthAngle={-Infinity}
+          maxAzimuthAngle={Infinity}
+          minPolarAngle={lockPolar && lockedPolar !== null ? lockedPolar : 0}
+          maxPolarAngle={lockPolar && lockedPolar !== null ? lockedPolar : Math.PI}
           onChange={e => {
             setCameraDistance(e.target.object.position.length());
           }}
@@ -632,6 +676,66 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
       >
         {showDebug ? "デバッグ非表示" : "デバッグ表示"}
       </button>
+
+      {/* ランダム回転ボタン＋視点固定トグルボタン（縦並び） */}
+      <div style={{
+        position: "absolute",
+        top: 150,
+        left: 10,
+        zIndex: 2100,
+        background: "#fff",
+        padding: "12px",
+        borderRadius: "8px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        display: "flex",
+        flexDirection: "column", // 縦並び
+        alignItems: "center",
+        gap: "10px"
+      }}>
+        <button onClick={() => randomRotate()} style={buttonStyle}>
+          ランダム回転（8回）
+        </button>
+        <button
+          style={{
+            ...buttonStyle,
+            background: lockPolar ? "#1976d2" : "#aaa",
+            color: "#fff"
+          }}
+          onClick={() => {
+            setLockPolar(v => {
+              const next = !v;
+              if (!next) {
+                setLockedPolar(null);
+                setLockedAzimuth(null);
+              } else if (orbitRef.current) {
+                setLockedPolar(orbitRef.current.getPolarAngle());
+                setLockedAzimuth(orbitRef.current.getAzimuthalAngle());
+              }
+              return next;
+            });
+          }}
+        >
+          {lockPolar ? "回転一部固定" : "回転自由"}
+        </button>
+        <button
+          style={buttonStyle}
+          onClick={() => setCubelets(prev => rotateAllLayers(prev, "x", true))}
+        >
+          X軸全体90度回転
+        </button>
+        <button
+          style={buttonStyle}
+          onClick={() => setCubelets(prev => rotateAllLayers(prev, "y", true))}
+        >
+          Y軸全体90度回転
+        </button>
+        <button
+          style={buttonStyle}
+          onClick={() => setCubelets(prev => rotateAllLayers(prev, "z", true))}
+        >
+          Z軸全体90度回転
+        </button>
+      </div>
     </div>
   );
 }
