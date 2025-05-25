@@ -1,228 +1,121 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
+import Cubelet from "../components/Cubelet";
+import RotatingGroup from "../components/RotatingGroup";
+import AxesArrows from "../components/AxesArrows";
+import buttonStyle from "../styles/buttonStyle";
+import {
+  createInitialCubelets,
+  rotateFace,
+  rotateAllLayers,
+  isCubeSolved,
+  createFaceTextures,
+  FACE_NAMES
+} from "../utils/cubeUtils";
 
 const CAMERA_DISTANCE_MIN = 3;
 const CAMERA_DISTANCE_MAX = 20;
 
-// 6面の面名
-const FACE_NAMES = ["front", "back", "right", "left", "top", "bottom"];
+// ★ 追加: 各面の向き情報
+const FACE_CAMERA_CONFIG = {
+  front:  { pos: [0, 0, 5], look: [0, 0, 0], up: [0, 1, 0] },
+  back:   { pos: [0, 0, -5], look: [0, 0, 0], up: [0, 1, 0] },
+  right:  { pos: [5, 0, 0], look: [0, 0, 0], up: [0, 1, 0] },
+  left:   { pos: [-5, 0, 0], look: [0, 0, 0], up: [0, 1, 0] },
+  top:    { pos: [0, 5, 0], look: [0, 0, 0], up: [0, 0, -1] },
+  bottom: { pos: [0, -5, 0], look: [0, 0, 0], up: [0, 0, 1] },
+};
 
-// 6面の既定の漢字
-const DEFAULT_FACE_KANJI = "乃木櫻日向坂";
-
-// 1面を3x3に分割したテクスチャ配列を生成
-function createFaceTextures(kanji, faceName, size = 192) {
-  // ルービックキューブ標準色
-  const FACE_COLORS = {
-    front: "#ffffff",   // 白 (Z+)
-    back: "#ffff00",    // 黄 (Z-)
-    right: "#ff0000",   // 赤 (X+)
-    left: "#ff8c00",    // オレンジ (X-)
-    top: "#0000ff",     // 青 (Y+)
-    bottom: "#00ff00"   // 緑 (Y-)
-  };
-
-  // 1面の全体canvasを生成し、中央に漢字を描画
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = FACE_COLORS[faceName] || "#fff";
-  ctx.fillRect(0, 0, size, size);
-  ctx.font = `${size * 0.9}px serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "#222";
-  ctx.fillText(kanji, size / 2, size / 2);
-
-  // 3x3に分割してテクスチャ配列を作成
-  const cell = size / 3;
-  const textures = [];
-  for (let y = 0; y < 3; y++) {
-    for (let x = 0; x < 3; x++) {
-      const cellCanvas = document.createElement("canvas");
-      cellCanvas.width = cell;
-      cellCanvas.height = cell;
-      const cellCtx = cellCanvas.getContext("2d");
-      cellCtx.drawImage(
-        canvas,
-        x * cell, y * cell, cell, cell, // src
-        0, 0, cell, cell                // dst
-      );
-      const texture = new THREE.Texture(cellCanvas);
-      texture.needsUpdate = true;
-      textures.push(texture);
-    }
-  }
-  return textures; // [0,1,2,3,4,5,6,7,8]
-}
-
-// 各面のテクスチャインデックス計算
-function getFaceTextureIndices(x, y, z) {
-  return {
-    right:  x === 1 ? (1 - y) * 3 + (1 - z) : null,
-    left:   x === -1 ? (1 - y) * 3 + (z + 1) : null,
-    top:    y === 1 ? (z + 1) * 3 + (x + 1) : null,
-    bottom: y === -1 ? (1 - z) * 3 + (x + 1) : null,
-    front:  z === 1 ? (1 - y) * 3 + (x + 1) : null,
-    back:   z === -1 ? (1 - y) * 3 + (1 - x) : null,
-  };
-}
-
-// 初期キューブレット配列を作成
-function createInitialCubelets() {
-  const cubelets = [];
-  for (let x = -1; x <= 1; x++) {
-    for (let y = -1; y <= 1; y++) {
-      for (let z = -1; z <= 1; z++) {
-        cubelets.push({
-          id: `${x}_${y}_${z}`,
-          position: [x, y, z],
-          rotation: [0, 0, 0], // ← 各キューブレットのローカル回転
-          faceTextureIndices: getFaceTextureIndices(x, y, z),
-        });
-      }
-    }
-  }
-  return cubelets;
-}
-
-// 個別のキューブレットコンポーネント
-function Cubelet({ position, rotation, faceTextureIndices, faceTextures, onClick, onPointerMove }) {
-  // 各面のテクスチャを取得
-  const materials = [
-    new THREE.MeshStandardMaterial({ map: faceTextureIndices.right !== null ? faceTextures.right[faceTextureIndices.right] : null, color: faceTextureIndices.right !== null ? "#fff" : "#333" }),
-    new THREE.MeshStandardMaterial({ map: faceTextureIndices.left !== null ? faceTextures.left[faceTextureIndices.left] : null, color: faceTextureIndices.left !== null ? "#fff" : "#333" }),
-    new THREE.MeshStandardMaterial({ map: faceTextureIndices.top !== null ? faceTextures.top[faceTextureIndices.top] : null, color: faceTextureIndices.top !== null ? "#fff" : "#333" }),
-    new THREE.MeshStandardMaterial({ map: faceTextureIndices.bottom !== null ? faceTextures.bottom[faceTextureIndices.bottom] : null, color: faceTextureIndices.bottom !== null ? "#fff" : "#333" }),
-    new THREE.MeshStandardMaterial({ map: faceTextureIndices.front !== null ? faceTextures.front[faceTextureIndices.front] : null, color: faceTextureIndices.front !== null ? "#fff" : "#333" }),
-    new THREE.MeshStandardMaterial({ map: faceTextureIndices.back !== null ? faceTextures.back[faceTextureIndices.back] : null, color: faceTextureIndices.back !== null ? "#fff" : "#333" }),
-  ];
-  return (
-    <mesh
-      position={position}
-      rotation={rotation}
-      onPointerDown={onClick}
-      onPointerMove={e => {
-        e.stopPropagation();
-        onPointerMove && onPointerMove(e);
-      }}
-      material={materials}
-    >
-      <boxGeometry args={[0.95, 0.95, 0.95]} />
-    </mesh>
-  );
-}
-
-// 回転グループコンポーネント
-function RotatingGroup({ cubelets, rotationAxis, rotationAngle, faceTextures }) {
-  const groupRef = useRef();
-  const rotation = rotationAxis === 'x' ? [rotationAngle, 0, 0] :
-                   rotationAxis === 'y' ? [0, rotationAngle, 0] :
-                   [0, 0, rotationAngle];
-
-  return (
-    <group ref={groupRef} rotation={rotation}>
-      {cubelets.map(cubelet => (
-        <Cubelet
-          key={cubelet.id}
-          position={cubelet.position}
-          rotation={cubelet.rotation}
-          faceTextureIndices={cubelet.faceTextureIndices}
-          faceTextures={faceTextures}
-        />
-      ))}
-    </group>
-  );
-}
-
-// 面を回転させる関数（positionとrotationのみを更新）
-function rotateFace(cubelets, axis, layer, clockwise = true) {
-  const angle = clockwise ? -Math.PI / 2 : Math.PI / 2;
-  return cubelets.map(cubelet => {
-    const [x, y, z] = cubelet.position;
-    let shouldRotate = false;
-    if (axis === 'x' && x === layer) shouldRotate = true;
-    if (axis === 'y' && y === layer) shouldRotate = true;
-    if (axis === 'z' && z === layer) shouldRotate = true;
-    if (!shouldRotate) return cubelet;
-
-    // 位置の回転（従来通り）
-    let newPosition = [...cubelet.position];
-    if (axis === 'x') {
-      const newY = Math.round(Math.cos(angle) * y - Math.sin(angle) * z);
-      const newZ = Math.round(Math.sin(angle) * y + Math.cos(angle) * z);
-      newPosition = [x, newY, newZ];
-    } else if (axis === 'y') {
-      const newX = Math.round(Math.cos(angle) * x + Math.sin(angle) * z);
-      const newZ = Math.round(-Math.sin(angle) * x + Math.cos(angle) * z);
-      newPosition = [newX, y, newZ];
-    } else if (axis === 'z') {
-      const newX = Math.round(Math.cos(angle) * x - Math.sin(angle) * y);
-      const newY = Math.round(Math.sin(angle) * x + Math.cos(angle) * y);
-      newPosition = [newX, newY, z];
-    }
-
-    // 回転の合成（クォータニオンで合成）
-    const prevQ = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(...cubelet.rotation, "XYZ")
-    );
-    let deltaQ;
-    if (axis === 'x') {
-      deltaQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), angle);
-    } else if (axis === 'y') {
-      deltaQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-    } else if (axis === 'z') {
-      deltaQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle);
-    }
-    // 新しい回転 = deltaQ * prevQ
-    const newQ = deltaQ.multiply(prevQ);
-    const newEuler = new THREE.Euler().setFromQuaternion(newQ, "XYZ");
-    const newRotation = [newEuler.x, newEuler.y, newEuler.z];
-
-    return {
-      ...cubelet,
-      id: `${newPosition[0]}_${newPosition[1]}_${newPosition[2]}`,
-      position: newPosition,
-      rotation: newRotation,
-    };
+// ★ 追加: キューブ全体を描画するシーンを生成
+function createCubeScene(cubelets, faceTextures) {
+  const scene = new THREE.Scene();
+  cubelets.forEach(cubelet => {
+    const materials = [
+      new THREE.MeshStandardMaterial({ map: cubelet.faceTextureIndices.right !== null ? faceTextures.right[cubelet.faceTextureIndices.right] : null, color: cubelet.faceTextureIndices.right !== null ? "#fff" : "#333" }),
+      new THREE.MeshStandardMaterial({ map: cubelet.faceTextureIndices.left !== null ? faceTextures.left[cubelet.faceTextureIndices.left] : null, color: cubelet.faceTextureIndices.left !== null ? "#fff" : "#333" }),
+      new THREE.MeshStandardMaterial({ map: cubelet.faceTextureIndices.top !== null ? faceTextures.top[cubelet.faceTextureIndices.top] : null, color: cubelet.faceTextureIndices.top !== null ? "#fff" : "#333" }),
+      new THREE.MeshStandardMaterial({ map: cubelet.faceTextureIndices.bottom !== null ? faceTextures.bottom[cubelet.faceTextureIndices.bottom] : null, color: cubelet.faceTextureIndices.bottom !== null ? "#fff" : "#333" }),
+      new THREE.MeshStandardMaterial({ map: cubelet.faceTextureIndices.front !== null ? faceTextures.front[cubelet.faceTextureIndices.front] : null, color: cubelet.faceTextureIndices.front !== null ? "#fff" : "#333" }),
+      new THREE.MeshStandardMaterial({ map: cubelet.faceTextureIndices.back !== null ? faceTextures.back[cubelet.faceTextureIndices.back] : null, color: cubelet.faceTextureIndices.back !== null ? "#fff" : "#333" }),
+    ];
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.95, 0.95), materials);
+    mesh.position.set(...cubelet.position);
+    mesh.rotation.set(...cubelet.rotation);
+    scene.add(mesh);
   });
+  // ライトも追加
+  scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+  scene.add(new THREE.DirectionalLight(0xffffff, 0.8));
+  return scene;
 }
 
-// --- RubiksCubeコンポーネント内、または外に共通関数を追加 ---
-function rotateAllLayers(cubelets, axis, clockwise = true) {
-  let result = cubelets;
-  [-1, 0, 1].forEach(layer => {
-    result = rotateFace(result, axis, layer, clockwise);
-  });
-  return result;
+// ★ 追加: 各面をレンダリングしてcanvasを取得
+async function renderCubeFaceToCanvas(cubelets, faceTextures, face, size = 192) {
+  const scene = createCubeScene(cubelets, faceTextures);
+  const renderer = new THREE.WebGLRenderer({ preserveDrawingBuffer: true, antialias: true });
+  renderer.setSize(size, size);
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+  const conf = FACE_CAMERA_CONFIG[face];
+  camera.position.set(...conf.pos);
+  camera.up.set(...conf.up);
+  camera.lookAt(...conf.look);
+  renderer.render(scene, camera);
+
+  // canvasを取得
+  const canvas = renderer.domElement;
+  // 必要ならcanvasを複製
+  const copy = document.createElement("canvas");
+  copy.width = size;
+  copy.height = size;
+  copy.getContext("2d").drawImage(canvas, 0, 0);
+  renderer.dispose();
+  return copy;
 }
 
-// メインのルービックキューブコンポーネント
-function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
+function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
   const [cubelets, setCubelets] = useState(createInitialCubelets());
+  const [initialCubelets, setInitialCubelets] = useState(() => createInitialCubelets());
+  const [isCleared, setIsCleared] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugInfo, setDebugInfo] = useState({});
   const [isRotating, setIsRotating] = useState(false);
   const [rotatingCubelets, setRotatingCubelets] = useState([]);
   const [rotationAxis, setRotationAxis] = useState(null);
   const [rotationAngle, setRotationAngle] = useState(0);
   const [rotationLayer, setRotationLayer] = useState(null);
-  const [showDebug, setShowDebug] = useState(false);
   const [cameraDistance, setCameraDistance] = useState(5);
-  // --- state追加 ---
   const [lockPolar, setLockPolar] = useState(false);
-  const [lockedPolar, setLockedPolar] = useState(null); // 追加: 固定時のpolar角を保持
-  const [lockedAzimuth, setLockedAzimuth] = useState(null); // 追加: 固定時のazimuth角を保持
+  const [lockedPolar, setLockedPolar] = useState(null);
+  const [lockedAzimuth, setLockedAzimuth] = useState(null);
 
-  // --- OrbitControls参照用ref ---
+  // 6面分のテクスチャ配列を生成（useMemoでキャッシュ）
+  const faceTextures = useMemo(() => {
+    const kanjiArr = faceKanji.slice(0, 6).split("");
+    const textures = {};
+    FACE_NAMES.forEach((face, i) => {
+      textures[face] = createFaceTextures(kanjiArr[i], face);
+    });
+    return textures;
+  }, [faceKanji]);
+
+  // 初期状態のfaceTexturesもstateで保持
+  const [initialFaceTextures, setInitialFaceTextures] = useState(() => {
+    const kanjiArr = faceKanji.slice(0, 6).split("");
+    const textures = {};
+    FACE_NAMES.forEach((face, i) => {
+      textures[face] = createFaceTextures(kanjiArr[i], face);
+    });
+    return textures;
+  });
+
   const orbitRef = useRef();
 
-  // --- カメラ距離をシークバーで直接反映 ---
+  // カメラ距離をシークバーで直接反映
   const handleSlider = useCallback(e => {
     const v = Number(e.target.value);
     setCameraDistance(v);
-    // カメラの位置も直接更新
     const { camera } = window.__threeFiberRoot?.getState?.() || {};
     if (camera) {
       const len = Math.sqrt(camera.position.x ** 2 + camera.position.y ** 2 + camera.position.z ** 2);
@@ -231,15 +124,72 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
     }
   }, []);
 
-  // ドラッグ開始時の情報
+  // ドラッグ関連
   const dragStartRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
-  const dragPlaneRef = useRef(null); // "xy", "yz", "zx"
+  const dragPlaneRef = useRef(null);
   const dragCubeletRef = useRef(null);
-  const dragStart3DRef = useRef(null); // 3D座標のドラッグ開始点を記憶
+  const dragStart3DRef = useRef(null);
 
-  // デバッグ情報を表示するためのstate
-  const [debugInfo, setDebugInfo] = useState({});
+  // 各面の9枚の画像canvasを取得
+  function getFaceCanvases(faceTextures, face) {
+    // faceTextures[face]は3x3=9個のTHREE.Texture
+    // それぞれのimageプロパティがcanvas
+    return faceTextures[face].map(tex => tex.image);
+  }
+
+  // 2つのcanvasのピクセルデータを比較（完全一致ならtrue）
+  function isCanvasImageEqual(canvasA, canvasB) {
+    if (!canvasA || !canvasB) return false;
+    if (canvasA.width !== canvasB.width || canvasA.height !== canvasB.height) return false;
+    const ctxA = canvasA.getContext("2d");
+    const ctxB = canvasB.getContext("2d");
+    const dataA = ctxA.getImageData(0, 0, canvasA.width, canvasA.height).data;
+    const dataB = ctxB.getImageData(0, 0, canvasB.width, canvasB.height).data;
+    for (let i = 0; i < dataA.length; i++) {
+      if (dataA[i] !== dataB[i]) return false;
+    }
+    return true;
+  }
+
+  // 各面の9枚のcanvas画像が初期状態と一致しているか
+  function isFaceImagesSolved(faceTexturesNow, faceTexturesInit) {
+    for (const face of FACE_NAMES) {
+      const nowCanvases = getFaceCanvases(faceTexturesNow, face);
+      const initCanvases = getFaceCanvases(faceTexturesInit, face);
+      for (let i = 0; i < 9; i++) {
+        if (!isCanvasImageEqual(nowCanvases[i], initCanvases[i])) return false;
+      }
+    }
+    return true;
+  }
+
+  // 判定ボタン押下時のみ画像判定を実行
+  const handleJudge = async () => {
+    // 各面をレンダリングしてcanvasを取得
+    let allMatch = true;
+    for (const face of FACE_NAMES) {
+      const nowCanvas = await renderCubeFaceToCanvas(cubelets, faceTextures, face);
+      const initCanvases = getFaceCanvases(initialFaceTextures, face);
+      // 3x3分割のうち、中央部分だけを比較する場合はここでcrop
+      // ここでは全体画像で比較
+      const initCanvas = document.createElement("canvas");
+      initCanvas.width = nowCanvas.width;
+      initCanvas.height = nowCanvas.height;
+      initCanvas.getContext("2d").drawImage(initCanvases[4], 0, 0, nowCanvas.width, nowCanvas.height); // 中央画像を拡大
+      if (!isCanvasImageEqual(nowCanvas, initCanvas)) {
+        allMatch = false;
+        break;
+      }
+    }
+    setIsCleared(allMatch);
+    setDebugInfo(info => ({
+      ...info,
+      faceImagesSolved: allMatch,
+      cubelets,
+      initialCubelets
+    }));
+  };
 
   // 1. 小ブロックと面の記憶（回転対象はまだ決めない）
   const handleCubeletClick = useCallback((event) => {
@@ -253,8 +203,6 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
     );
     if (!cubelet) return;
 
-    // ★ ここで右クリックと左クリックの機能を逆転
-    // 左クリック（button === 0）のみで回転操作を開始
     if (event.nativeEvent.button === 0) {
       dragStartRef.current = { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY };
       dragStart3DRef.current = event.point?.clone?.() ?? null;
@@ -368,25 +316,21 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
         return;
       }
 
-      // --- 回転方向をatan2の差分で判定（共通化） ---
+      // --- 回転方向をatan2の差分で判定 ---
       let clockwise = false;
       let deltaTheta = 0;
       let theta0 = 0, theta1 = 0;
 
       if (axis === "x") {
-        // YZ平面
         theta0 = Math.atan2(start[2], start[1]);
         theta1 = Math.atan2(end[2], end[1]);
       } else if (axis === "y") {
-        // ZX平面
         theta0 = Math.atan2(start[0], start[2]);
         theta1 = Math.atan2(end[0], end[2]);
       } else if (axis === "z") {
-        // XY平面
         theta0 = Math.atan2(start[1], start[0]);
         theta1 = Math.atan2(end[1], end[0]);
       }
-      // 差分を -π〜+π の範囲に正規化
       deltaTheta = theta1 - theta0;
       if (deltaTheta > Math.PI) deltaTheta -= 2 * Math.PI;
       if (deltaTheta < -Math.PI) deltaTheta += 2 * Math.PI;
@@ -459,16 +403,6 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
     dragStartRef.current._cubeletId = undefined;
   }, []);
 
-  // 6面分のテクスチャ配列を生成（useMemoでキャッシュ）
-  const faceTextures = useMemo(() => {
-    const kanjiArr = faceKanji.slice(0, 6).split("");
-    const textures = {};
-    FACE_NAMES.forEach((face, i) => {
-      textures[face] = createFaceTextures(kanjiArr[i], face);
-    });
-    return textures;
-  }, [faceKanji]);
-
   // 静的なキューブレット（回転中でないもの）
   const staticCubelets = cubelets.filter(cubelet =>
     !rotatingCubelets.some(rc => rc.id === cubelet.id)
@@ -485,6 +419,8 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
 
   // ランダム回転処理
   const randomRotate = useCallback(async (count = 8, delay = 200) => {
+    setInitialCubelets(cubelets);
+    setInitialFaceTextures(faceTextures); // ← ここで初期faceTexturesも更新
     const axes = ['x', 'y', 'z'];
     const layers = [-1, 0, 1];
     for (let i = 0; i < count; i++) {
@@ -500,7 +436,7 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
       // eslint-disable-next-line no-await-in-loop
       await new Promise(res => setTimeout(res, delay));
     }
-  }, []);
+  }, [cubelets, faceTextures]);
 
   return (
     <div
@@ -511,13 +447,13 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
       {/* ズームUI */}
       <div style={{
         position: "absolute",
-        top: 60,
+        top: 150,
         left: 10,
         zIndex: 2100,
         background: "#fff",
         padding: "12px",
         borderRadius: "8px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        boxShadow: "0 2px 8px rgba(153, 125, 125, 0.08)",
         display: "flex",
         alignItems: "center",
         gap: "10px"
@@ -541,7 +477,6 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
       <Canvas
         camera={{ position: [cameraDistance, cameraDistance, cameraDistance], fov: 50 }}
         onCreated={({ camera }) => {
-          // シークバー操作時にカメラ距離を同期できるようにwindowに保存
           window.__threeFiberRoot = { getState: () => ({ camera }) };
         }}
       >
@@ -582,7 +517,6 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
           }}
           minDistance={CAMERA_DISTANCE_MIN}
           maxDistance={CAMERA_DISTANCE_MAX}
-          // Y軸（水平回転）は常に許可、上下（polar）のみ固定
           minAzimuthAngle={-Infinity}
           maxAzimuthAngle={Infinity}
           minPolarAngle={lockPolar && lockedPolar !== null ? lockedPolar : 0}
@@ -592,6 +526,26 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
           }}
         />
       </Canvas>
+
+      {/* クリア表示UI */}
+      {isCleared && (
+        <div style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          background: "rgba(255,255,255,0.95)",
+          color: "#1976d2",
+          fontSize: "2rem",
+          fontWeight: "bold",
+          padding: "32px 48px",
+          borderRadius: "16px",
+          zIndex: 3000,
+          boxShadow: "0 4px 24px rgba(0,0,0,0.15)"
+        }}>
+          クリア！
+        </div>
+      )}
 
       {/* デバッグ用回転ボタン */}
       {showDebug && (
@@ -660,6 +614,7 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
       {/* デバッグ表示切替ボタン */}
       <button
         style={{
+          visibility: "collapse", // デバッグ用機能のため非表示
           position: "absolute",
           top: 10,
           left: 10,
@@ -680,7 +635,7 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
       {/* ランダム回転ボタン＋視点固定トグルボタン（縦並び） */}
       <div style={{
         position: "absolute",
-        top: 150,
+        top: 250,
         left: 10,
         zIndex: 2100,
         background: "#fff",
@@ -688,13 +643,19 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
         borderRadius: "8px",
         boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         display: "flex",
-        flexDirection: "column", // 縦並び
+        flexDirection: "column",
         alignItems: "center",
         gap: "10px"
       }}>
         <button onClick={() => randomRotate()} style={buttonStyle}>
           ランダム回転（8回）
         </button>
+
+        {/* 判定ボタン 未完成のためコメントアウト */}
+        {/* <button onClick={handleJudge} style={buttonStyle}>
+            クリア判定
+        </button> */}
+
         <button
           style={{
             ...buttonStyle,
@@ -715,7 +676,7 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
             });
           }}
         >
-          {lockPolar ? "回転一部固定" : "回転自由"}
+          {lockPolar ? "回転軸固定" : "回転自由"}
         </button>
         <button
           style={buttonStyle}
@@ -735,61 +696,17 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
         >
           Z軸全体90度回転
         </button>
+
+        <button
+            onClick={() => setCubelets(createInitialCubelets())}
+            style={{ ...buttonStyle, backgroundColor: '#ff6b6b', marginTop: '20px' }}
+        >
+            リセット
+        </button>
+
       </div>
     </div>
   );
-}
-
-const buttonStyle = {
-  padding: "8px 16px",
-  margin: "4px",
-  border: "none",
-  borderRadius: "6px",
-  background: "#eee",
-  color: "#333",
-  fontWeight: "bold",
-  cursor: "pointer",
-  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-  transition: "background 0.2s",
-};
-
-// XYZ軸を表示するコンポーネント
-function AxesArrows() {
-  const groupRef = useRef();
-
-  useEffect(() => {
-    const group = groupRef.current;
-    while (group && group.children.length > 0) {
-      group.remove(group.children[0]);
-    }
-    const xArrow = new THREE.ArrowHelper(
-      new THREE.Vector3(1, 0, 0),
-      new THREE.Vector3(0, 0, 0),
-      5,
-      0xff4444,
-      1,
-      0.5
-    );
-    const yArrow = new THREE.ArrowHelper(
-      new THREE.Vector3(0, 1, 0),
-      new THREE.Vector3(0, 0, 0),
-      5,
-      0x00ff00,
-      1,
-      0.5
-    );
-    const zArrow = new THREE.ArrowHelper(
-      new THREE.Vector3(0, 0, 1),
-      new THREE.Vector3(0, 0, 0),
-      5,
-      0x3366ff,
-      1,
-      0.5
-    );
-    group && group.add(xArrow, yArrow, zArrow);
-  }, []);
-
-  return <group ref={groupRef} />;
 }
 
 export default RubiksCube;
