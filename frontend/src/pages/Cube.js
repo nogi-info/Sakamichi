@@ -1,7 +1,10 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
+
+const CAMERA_DISTANCE_MIN = 3;
+const CAMERA_DISTANCE_MAX = 20;
 
 // 6面の面名
 const FACE_NAMES = ["front", "back", "right", "left", "top", "bottom"];
@@ -55,16 +58,6 @@ function createFaceTextures(kanji, faceName, size = 192) {
   }
   return textures; // [0,1,2,3,4,5,6,7,8]
 }
-
-// 6面の色定義
-const FACE_COLORS = {
-  front: "#ffffff",   // 白 (Z+)
-  back: "#ffff00",    // 黄 (Z-)
-  right: "#ff0000",   // 赤 (X+)
-  left: "#ff8c00",    // オレンジ (X-)
-  top: "#0000ff",     // 青 (Y+)
-  bottom: "#00ff00"   // 緑 (Y-)
-};
 
 // 各面のテクスチャインデックス計算
 function getFaceTextureIndices(x, y, z) {
@@ -198,8 +191,6 @@ function rotateFace(cubelets, axis, layer, clockwise = true) {
   });
 }
 
-const DRAG_THRESHOLD = 10; // ピクセル、必要に応じて調整
-
 // メインのルービックキューブコンポーネント
 function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
   const [cubelets, setCubelets] = useState(createInitialCubelets());
@@ -208,6 +199,21 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
   const [rotationAxis, setRotationAxis] = useState(null);
   const [rotationAngle, setRotationAngle] = useState(0);
   const [rotationLayer, setRotationLayer] = useState(null);
+  const [showDebug, setShowDebug] = useState(false);
+  const [cameraDistance, setCameraDistance] = useState(5);
+
+  // --- カメラ距離をシークバーで直接反映 ---
+  const handleSlider = useCallback(e => {
+    const v = Number(e.target.value);
+    setCameraDistance(v);
+    // カメラの位置も直接更新
+    const { camera } = window.__threeFiberRoot?.getState?.() || {};
+    if (camera) {
+      const len = Math.sqrt(camera.position.x ** 2 + camera.position.y ** 2 + camera.position.z ** 2);
+      camera.position.multiplyScalar(v / len);
+      camera.updateProjectionMatrix();
+    }
+  }, []);
 
   // ドラッグ開始時の情報
   const dragStartRef = useRef({ x: 0, y: 0 });
@@ -231,8 +237,9 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
     );
     if (!cubelet) return;
 
-    // 右クリックのみ
-    if (event.nativeEvent.button === 2) {
+    // ★ ここで右クリックと左クリックの機能を逆転
+    // 左クリック（button === 0）のみで回転操作を開始
+    if (event.nativeEvent.button === 0) {
       dragStartRef.current = { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY };
       dragStart3DRef.current = event.point?.clone?.() ?? null;
       isDraggingRef.current = true;
@@ -247,9 +254,7 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
       dragStartRef.current._rotated = undefined;
 
       // --- 回転後の法線を計算 ---
-      // event.face.normalはローカル座標系
       const localNormal = event.face.normal.clone();
-      // キューブレットのrotationを反映
       const euler = new THREE.Euler(...cubelet.rotation, "XYZ");
       const worldNormal = localNormal.applyEuler(euler);
 
@@ -280,7 +285,7 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
         object: event.object.position ? event.object.position.toArray() : null,
         cursor: event.point ? event.point.toArray() : null,
         point: event.object.position ? event.object.position.toArray() : null,
-        normal: worldNormal ? worldNormal.toArray() : null, // ← 修正
+        normal: worldNormal ? worldNormal.toArray() : null,
       });
     }
   }, [cubelets, isRotating]);
@@ -461,15 +466,51 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
 
   return (
     <div
-      style={{ width: '100%', height: '600px', background: '#f0f0f0' }}
+      style={{ width: '100%', height: '800px', background: '#f0f0f0' }}
       onContextMenu={e => e.preventDefault()}
       onPointerUp={handlePointerUp}
     >
-      <Canvas camera={{ position: [5, 5, 5], fov: 50 }}>
+      {/* ズームUI */}
+      <div style={{
+        position: "absolute",
+        top: 60,
+        left: 10,
+        zIndex: 2100,
+        background: "#fff",
+        padding: "12px",
+        borderRadius: "8px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px"
+      }}>
+        <button onClick={() => handleSlider({ target: { value: Math.min(CAMERA_DISTANCE_MAX, cameraDistance + 0.5) } })} style={buttonStyle}>－</button>
+        <input
+          type="range"
+          min={CAMERA_DISTANCE_MIN}
+          max={CAMERA_DISTANCE_MAX}
+          step={0.1}
+          value={CAMERA_DISTANCE_MAX - cameraDistance + CAMERA_DISTANCE_MIN}
+          onChange={e => {
+              e.target.value = CAMERA_DISTANCE_MAX - e.target.value + CAMERA_DISTANCE_MIN; // 反転
+              handleSlider(e);
+          }}
+          style={{ width: 120 }}
+        />
+        <button onClick={() => handleSlider({ target: { value: Math.max(2, cameraDistance - 0.5) } })} style={buttonStyle}>＋</button>
+      </div>
+
+      <Canvas
+        camera={{ position: [cameraDistance, cameraDistance, cameraDistance], fov: 50 }}
+        onCreated={({ camera }) => {
+          // シークバー操作時にカメラ距離を同期できるようにwindowに保存
+          window.__threeFiberRoot = { getState: () => ({ camera }) };
+        }}
+      >
         <ambientLight intensity={0.6} />
         <directionalLight position={[5, 5, 5]} intensity={0.8} />
 
-        <AxesArrows />
+        {showDebug && <AxesArrows />}
 
         {staticCubelets.map(cubelet => (
           <Cubelet
@@ -492,16 +533,25 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
           />
         )}
 
-        <OrbitControls enablePan={false} />
+        <OrbitControls
+          enablePan={false}
+          enableZoom={true}
+          mouseButtons={{
+            LEFT: null,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.ROTATE,
+          }}
+          minDistance={CAMERA_DISTANCE_MIN}
+          maxDistance={CAMERA_DISTANCE_MAX}
+          onChange={e => {
+            setCameraDistance(e.target.object.position.length());
+          }}
+        />
       </Canvas>
 
-      <div style={{ padding: '20px', color: '#333' }}>
-        <h2>ルービックキューブ</h2>
-        <p>右クリック + ドラッグで面を回転できます</p>
-        <p>短い距離のドラッグでも回転します（30度以上で確定）</p>
-        <p>マウスホイールでズーム、左クリック + ドラッグで視点を回転</p>
-
-        <div style={{ marginTop: '20px' }}>
+      {/* デバッグ用回転ボタン */}
+      {showDebug && (
+        <div style={{ marginTop: '20px', color: '#333' }}>
           <h3>デバッグ用回転ボタン</h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
             <div>
@@ -539,26 +589,49 @@ function RubiksCube({ faceKanji = DEFAULT_FACE_KANJI }) {
             リセット
           </button>
         </div>
-      </div>
+      )}
 
-      <div style={{
-        position: "absolute",
-        top: 10,
-        right: 10,
-        background: "rgba(0,0,0,0.7)",
-        color: "#fff",
-        padding: "12px",
-        borderRadius: "8px",
-        fontSize: "13px",
-        zIndex: 1000,
-        maxWidth: "320px",
-        wordBreak: "break-all"
-      }}>
-        <b>デバッグ情報</b>
-        <pre style={{ margin: 0, fontSize: "12px" }}>
-          {JSON.stringify(debugInfo, null, 2)}
-        </pre>
-      </div>
+      {/* デバッグ情報 */}
+      {showDebug && (
+        <div style={{
+          position: "absolute",
+          top: 10,
+          right: 10,
+          background: "rgba(0,0,0,0.7)",
+          color: "#fff",
+          padding: "12px",
+          borderRadius: "8px",
+          fontSize: "13px",
+          zIndex: 1000,
+          maxWidth: "320px",
+          wordBreak: "break-all"
+        }}>
+          <b>デバッグ情報</b>
+          <pre style={{ margin: 0, fontSize: "12px" }}>
+            {JSON.stringify(debugInfo, null, 2)}
+          </pre>
+        </div>
+      )}
+
+      {/* デバッグ表示切替ボタン */}
+      <button
+        style={{
+          position: "absolute",
+          top: 10,
+          left: 10,
+          zIndex: 2000,
+          padding: "8px 16px",
+          border: "none",
+          borderRadius: "6px",
+          background: showDebug ? "#4caf50" : "#aaa",
+          color: "#fff",
+          fontWeight: "bold",
+          cursor: "pointer"
+        }}
+        onClick={() => setShowDebug(v => !v)}
+      >
+        {showDebug ? "デバッグ非表示" : "デバッグ表示"}
+      </button>
     </div>
   );
 }
