@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-do
 import Home from "./pages/Home";
 import MemberListByYear from "./pages/MemberListByYear";
 import MemberTransition from "./pages/MemberTransition";
+import Cube from "./pages/Cube";
 
 // ナビゲーション用コンポーネント
 const NavBar = () => {
@@ -11,6 +12,7 @@ const NavBar = () => {
     { to: "/", label: "ホーム" },
     { to: "/members", label: "生年月日順ソート" },
     { to: "/transition", label: "メンバー構成の遷移" },
+    { to: "/cube", label: "Cube" }, // 追加
   ];
 
   return (
@@ -70,6 +72,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/members" element={<MemberListByYear />} />
         <Route path="/transition" element={<MemberTransition />} />
+        <Route path="/cube" element={<Cube />} /> {/* 追加 */}
       </Routes>
     </BrowserRouter>
   );
