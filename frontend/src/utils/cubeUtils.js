@@ -130,14 +130,3 @@ export function rotateAllLayers(cubelets, axis, clockwise = true) {
   });
   return result;
 }
-
-export function isCubeSolved(current, initial) {
-  return current.every((c, i) => {
-    const ic = initial[i];
-    return (
-      c.id === ic.id &&
-      c.position.every((v, j) => v === ic.position[j]) &&
-      c.rotation.every((v, j) => Math.abs(v - ic.rotation[j]) < 1e-4)
-    );
-  });
-}

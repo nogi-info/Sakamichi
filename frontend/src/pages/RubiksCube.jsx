@@ -10,69 +10,13 @@ import {
   createInitialCubelets,
   rotateFace,
   rotateAllLayers,
-  isCubeSolved,
   createFaceTextures,
   FACE_NAMES
 } from "../utils/cubeUtils";
+import { isCubeSolved } from "../utils/cubeCheckUtils";
 
 const CAMERA_DISTANCE_MIN = 3;
 const CAMERA_DISTANCE_MAX = 20;
-
-// ★ 追加: 各面の向き情報
-const FACE_CAMERA_CONFIG = {
-  front:  { pos: [0, 0, 5], look: [0, 0, 0], up: [0, 1, 0] },
-  back:   { pos: [0, 0, -5], look: [0, 0, 0], up: [0, 1, 0] },
-  right:  { pos: [5, 0, 0], look: [0, 0, 0], up: [0, 1, 0] },
-  left:   { pos: [-5, 0, 0], look: [0, 0, 0], up: [0, 1, 0] },
-  top:    { pos: [0, 5, 0], look: [0, 0, 0], up: [0, 0, -1] },
-  bottom: { pos: [0, -5, 0], look: [0, 0, 0], up: [0, 0, 1] },
-};
-
-// ★ 追加: キューブ全体を描画するシーンを生成
-function createCubeScene(cubelets, faceTextures) {
-  const scene = new THREE.Scene();
-  cubelets.forEach(cubelet => {
-    const materials = [
-      new THREE.MeshStandardMaterial({ map: cubelet.faceTextureIndices.right !== null ? faceTextures.right[cubelet.faceTextureIndices.right] : null, color: cubelet.faceTextureIndices.right !== null ? "#fff" : "#333" }),
-      new THREE.MeshStandardMaterial({ map: cubelet.faceTextureIndices.left !== null ? faceTextures.left[cubelet.faceTextureIndices.left] : null, color: cubelet.faceTextureIndices.left !== null ? "#fff" : "#333" }),
-      new THREE.MeshStandardMaterial({ map: cubelet.faceTextureIndices.top !== null ? faceTextures.top[cubelet.faceTextureIndices.top] : null, color: cubelet.faceTextureIndices.top !== null ? "#fff" : "#333" }),
-      new THREE.MeshStandardMaterial({ map: cubelet.faceTextureIndices.bottom !== null ? faceTextures.bottom[cubelet.faceTextureIndices.bottom] : null, color: cubelet.faceTextureIndices.bottom !== null ? "#fff" : "#333" }),
-      new THREE.MeshStandardMaterial({ map: cubelet.faceTextureIndices.front !== null ? faceTextures.front[cubelet.faceTextureIndices.front] : null, color: cubelet.faceTextureIndices.front !== null ? "#fff" : "#333" }),
-      new THREE.MeshStandardMaterial({ map: cubelet.faceTextureIndices.back !== null ? faceTextures.back[cubelet.faceTextureIndices.back] : null, color: cubelet.faceTextureIndices.back !== null ? "#fff" : "#333" }),
-    ];
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.95, 0.95), materials);
-    mesh.position.set(...cubelet.position);
-    mesh.rotation.set(...cubelet.rotation);
-    scene.add(mesh);
-  });
-  // ライトも追加
-  scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-  scene.add(new THREE.DirectionalLight(0xffffff, 0.8));
-  return scene;
-}
-
-// ★ 追加: 各面をレンダリングしてcanvasを取得
-async function renderCubeFaceToCanvas(cubelets, faceTextures, face, size = 192) {
-  const scene = createCubeScene(cubelets, faceTextures);
-  const renderer = new THREE.WebGLRenderer({ preserveDrawingBuffer: true, antialias: true });
-  renderer.setSize(size, size);
-  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-  const conf = FACE_CAMERA_CONFIG[face];
-  camera.position.set(...conf.pos);
-  camera.up.set(...conf.up);
-  camera.lookAt(...conf.look);
-  renderer.render(scene, camera);
-
-  // canvasを取得
-  const canvas = renderer.domElement;
-  // 必要ならcanvasを複製
-  const copy = document.createElement("canvas");
-  copy.width = size;
-  copy.height = size;
-  copy.getContext("2d").drawImage(canvas, 0, 0);
-  renderer.dispose();
-  return copy;
-}
 
 function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
   const [cubelets, setCubelets] = useState(createInitialCubelets());
@@ -167,27 +111,11 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
   // 判定ボタン押下時のみ画像判定を実行
   const handleJudge = async () => {
     // 各面をレンダリングしてcanvasを取得
-    let allMatch = true;
-    for (const face of FACE_NAMES) {
-      const nowCanvas = await renderCubeFaceToCanvas(cubelets, faceTextures, face);
-      const initCanvases = getFaceCanvases(initialFaceTextures, face);
-      // 3x3分割のうち、中央部分だけを比較する場合はここでcrop
-      // ここでは全体画像で比較
-      const initCanvas = document.createElement("canvas");
-      initCanvas.width = nowCanvas.width;
-      initCanvas.height = nowCanvas.height;
-      initCanvas.getContext("2d").drawImage(initCanvases[4], 0, 0, nowCanvas.width, nowCanvas.height); // 中央画像を拡大
-      if (!isCanvasImageEqual(nowCanvas, initCanvas)) {
-        allMatch = false;
-        break;
-      }
-    }
+    let allMatch = isCubeSolved(cubelets);
+
     setIsCleared(allMatch);
     setDebugInfo(info => ({
-      ...info,
-      faceImagesSolved: allMatch,
-      cubelets,
-      initialCubelets
+      allMatch: allMatch,
     }));
   };
 
@@ -418,7 +346,7 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
   };
 
   // ランダム回転処理
-  const randomRotate = useCallback(async (count = 8, delay = 200) => {
+  const randomRotate = useCallback(async (count = 12, delay = 200) => {
     setInitialCubelets(cubelets);
     setInitialFaceTextures(faceTextures); // ← ここで初期faceTexturesも更新
     const axes = ['x', 'y', 'z'];
@@ -648,13 +576,13 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
         gap: "10px"
       }}>
         <button onClick={() => randomRotate()} style={buttonStyle}>
-          ランダム回転（8回）
+          ランダム回転
         </button>
 
         {/* 判定ボタン 未完成のためコメントアウト */}
-        {/* <button onClick={handleJudge} style={buttonStyle}>
+        <button onClick={handleJudge} style={buttonStyle}>
             クリア判定
-        </button> */}
+        </button>
 
         <button
           style={{
