@@ -1,9 +1,9 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
-import MemberListByYear from "./pages/MemberListByYear";
-import MemberTransition from "./pages/MemberTransition";
-import RubiksCube from "./pages/RubiksCube"; // 追加
+import MemberListByYear from "./features/member-list/components/MemberListByYear";
+import MemberTransition from "./features/member-transition/components/MemberTransition";
+import RubiksCube from "./features/rubiks-cube/components/RubiksCube";
 
 // ナビゲーション用コンポーネント
 const NavBar = () => {

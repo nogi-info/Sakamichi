@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import Papa from "papaparse";
-import Layout from "../components/Layout";
+import Layout from "../../../styles/Layout";
 
 const csvBase = "/Sakamichi/data/";
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Papa from "papaparse";
-import GroupList from "../components/MemberList";
-import Layout from "../components/Layout";
+import GroupList from "./MemberList";
+import Layout from "../../../styles/Layout";
 
 const groupColors = {
   "乃木坂46": "#812990",
