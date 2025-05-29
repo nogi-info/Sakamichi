@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import * as THREE from "three";
 import { rotateFace } from "../utils/cubeUtils";
 
@@ -13,6 +13,7 @@ import { rotateFace } from "../utils/cubeUtils";
  * @param {Function} setRotationAngle - 回転角度の更新関数
  * @param {Function} setRotationLayer - 回転レイヤーの更新関数
  * @param {Function} setDebugInfo - デバッグ情報の更新関数
+ * @param {Function} judgeCleared - クリア判定関数
  */
 export function useDragRotation(
   cubelets,
@@ -23,7 +24,8 @@ export function useDragRotation(
   setRotationAxis,
   setRotationAngle,
   setRotationLayer,
-  setDebugInfo
+  setDebugInfo,
+  judgeCleared
 ) {
   // ドラッグ関連のref
   const dragStartRef = useRef({ x: 0, y: 0 });
@@ -31,6 +33,15 @@ export function useDragRotation(
   const dragPlaneRef = useRef(null);
   const dragCubeletRef = useRef(null);
   const dragStart3DRef = useRef(null);
+  const shouldCheckClearRef = useRef(false);
+
+  // cubelets更新後にクリア判定を実行
+  useEffect(() => {
+    if (shouldCheckClearRef.current && !isRotating) {
+      shouldCheckClearRef.current = false;
+      judgeCleared();
+    }
+  }, [cubelets, isRotating, judgeCleared]);
 
   /**
    * 回転方向をatan2の差分で判定
@@ -267,7 +278,9 @@ export function useDragRotation(
         clockwise,
       }));
 
+      // 回転操作を実行し、クリア判定フラグを立てる
       setCubelets(prev => rotateFace(prev, axis, layer, clockwise));
+      shouldCheckClearRef.current = true;
     }
 
     // 状態をリセット

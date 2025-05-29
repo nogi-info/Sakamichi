@@ -11,8 +11,9 @@ import { isCubeSolved } from "../utils/cubeCheckUtils";
 /**
  * ルービックキューブの基本状態を管理するカスタムフック
  * @param {string} faceKanji - 各面に表示する漢字文字列
+ * @param {function} stopStopwatch - ストップウォッチを停止する関数
  */
-export function useCubeState(faceKanji = "乃木櫻日向坂") {
+export function useCubeState(faceKanji = "乃木櫻日向坂", stopStopwatch) { // stopStopwatchを引数として受け取る
   // キューブレットの状態
   const [cubelets, setCubelets] = useState(createInitialCubelets());
   const [initialCubelets, setInitialCubelets] = useState(() => createInitialCubelets());
@@ -26,6 +27,7 @@ export function useCubeState(faceKanji = "乃木櫻日向坂") {
   
   // ゲーム状態
   const [isCleared, setIsCleared] = useState(false);
+  const [gameStarted, setGameStarted] = useState(false); // ゲーム開始状態を追加
 
   // 6面分のテクスチャ配列を生成（useMemoでキャッシュ）
   const faceTextures = useMemo(() => {
@@ -58,6 +60,7 @@ export function useCubeState(faceKanji = "乃木櫻日向坂") {
     setRotationAngle(0);
     setRotationAxis(null);
     setRotationLayer(null);
+    setGameStarted(false); // リセット時もゲーム開始状態をfalseに
   }, []);
 
   /**
@@ -114,8 +117,11 @@ export function useCubeState(faceKanji = "乃木櫻日向坂") {
   const judgeCleared = useCallback(async () => {
     const allMatch = isCubeSolved(cubelets);
     setIsCleared(allMatch);
+    if (allMatch && stopStopwatch) { // キューブがクリアされたらストップウォッチを停止
+      stopStopwatch();
+    }
     return allMatch;
-  }, [cubelets]);
+  }, [cubelets, stopStopwatch]); // 依存配列にstopStopwatchを追加
 
   /**
    * 静的なキューブレット（回転中でないもの）を取得
@@ -146,6 +152,8 @@ export function useCubeState(faceKanji = "乃木櫻日向坂") {
     faceTextures,
     initialFaceTextures,
     staticCubelets,
+    gameStarted, // 追加
+    setGameStarted, // 追加
     
     // アクション
     resetCube,

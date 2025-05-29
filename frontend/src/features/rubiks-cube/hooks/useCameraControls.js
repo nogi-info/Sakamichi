@@ -13,7 +13,8 @@ export function useCameraControls() {
   const [lockPolar, setLockPolar] = useState(false);
   const [lockedPolar, setLockedPolar] = useState(null);
   const [lockedAzimuth, setLockedAzimuth] = useState(null);
-  
+  const [showZoomControls, setShowZoomControls] = useState(false); // ズームコントロールの表示状態
+
   const orbitRef = useRef();
 
   /**
@@ -67,6 +68,13 @@ export function useCameraControls() {
   }, []);
 
   /**
+   * ズームコントロールの表示/非表示を切り替える
+   */
+  const toggleZoomControls = useCallback(() => {
+    setShowZoomControls(prev => !prev);
+  }, []);
+
+  /**
    * OrbitControls の変更時の処理
    */
   const handleOrbitChange = useCallback((e) => {
@@ -87,7 +95,7 @@ export function useCameraControls() {
   const getOrbitControlsConfig = useCallback(() => ({
     ref: orbitRef,
     enablePan: false,
-    enableZoom: true,
+    enableZoom: showZoomControls, // showZoomControlsの状態に基づいてズームを有効/無効にする
     mouseButtons:{
       LEFT: null,
       MIDDLE: THREE.MOUSE.DOLLY,
@@ -100,7 +108,7 @@ export function useCameraControls() {
     minPolarAngle: lockPolar && lockedPolar !== null ? lockedPolar : 0,
     maxPolarAngle: lockPolar && lockedPolar !== null ? lockedPolar : Math.PI,
     onChange: handleOrbitChange
-  }), [lockPolar, lockedPolar, handleOrbitChange]);
+  }), [lockPolar, lockedPolar, handleOrbitChange, showZoomControls]); // showZoomControlsを依存配列に追加
 
   return {
     // 状態
@@ -109,11 +117,13 @@ export function useCameraControls() {
     lockedPolar,
     lockedAzimuth,
     orbitRef,
+    showZoomControls, // showZoomControlsを返す
     
     // アクション
     handleSlider,
     adjustCameraDistance,
     togglePolarLock,
+    toggleZoomControls, // toggleZoomControlsを返す
     handleOrbitChange,
     
     // 設定

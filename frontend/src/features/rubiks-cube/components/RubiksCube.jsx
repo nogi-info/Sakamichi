@@ -12,6 +12,7 @@ import DebugPanel from "./DebugPanel";
 import { useCubeState } from "../hooks/useCubeState";
 import { useDragRotation } from "../hooks/useDragRotation";
 import { useCameraControls } from "../hooks/useCameraControls";
+import { useStopwatch } from "../hooks/useStopwatch"; // Stopwatchフックをインポート
 
 // スタイル
 import buttonStyle from "../../../styles/buttonStyle";
@@ -21,6 +22,9 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
   const [showDebug, setShowDebug] = useState(false);
   const [showAxes, setShowAxes] = useState(false);
   const [debugInfo, setDebugInfo] = useState({});
+
+  // ストップウォッチ
+  const { time, startStopwatch, stopStopwatch, resetStopwatch } = useStopwatch();
 
   // キューブ状態管理
   const {
@@ -44,7 +48,9 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
     rotateEntireCube,
     randomRotate,
     judgeCleared,
-  } = useCubeState(faceKanji);
+    gameStarted, // gameStartedの状態を追加
+    setGameStarted, // setGameStartedのセッターを追加
+  } = useCubeState(faceKanji, stopStopwatch); // stopStopwatchをuseCubeStateに渡す
 
   // カメラ制御
   const {
@@ -57,9 +63,11 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
     getOrbitControlsConfig,
     CAMERA_DISTANCE_MIN,
     CAMERA_DISTANCE_MAX,
+    showZoomControls, // showZoomControlsをインポート
+    toggleZoomControls, // toggleZoomControlsをインポート
   } = useCameraControls();
 
-  // ドラッグ回転
+  // ドラッグ回転（judgeCleared関数を渡す）
   const { handleCubeletClick, handlePointerMove, handlePointerUp } = useDragRotation(
     cubelets,
     setCubelets,
@@ -69,8 +77,17 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
     setRotationAxis,
     setRotationAngle,
     setRotationLayer,
-    setDebugInfo
+    setDebugInfo,
+    judgeCleared // judgeClearedはuseCubeStateでstopStopwatchを呼ぶようになる
   );
+
+  // ゲームスタートハンドラ
+  const handleGameStart = async () => {
+    resetStopwatch(); // ストップウォッチをリセット
+    await randomRotate(); // ランダム回転を実行
+    setGameStarted(true); // ゲーム開始状態をtrueに
+    startStopwatch(); // ストップウォッチを開始
+  };
 
   return (
     <div
@@ -79,44 +96,46 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
       onPointerUp={handlePointerUp}
     >
       {/* ズームコントロール */}
-      <div style={{
-        position: "absolute",
-        top: 150,
-        left: 10,
-        zIndex: 2100,
-        background: "#fff",
-        padding: "12px",
-        borderRadius: "8px",
-        boxShadow: "0 2px 8px rgba(153, 125, 125, 0.08)",
-        display: "flex",
-        alignItems: "center",
-        gap: "10px"
-      }}>
-        <button 
-          onClick={() => adjustCameraDistance(0.5)} 
-          style={buttonStyle}
-        >
-          －
-        </button>
-        <input
-          type="range"
-          min={CAMERA_DISTANCE_MIN}
-          max={CAMERA_DISTANCE_MAX}
-          step={0.1}
-          value={CAMERA_DISTANCE_MAX - cameraDistance + CAMERA_DISTANCE_MIN}
-          onChange={e => {
-            e.target.value = CAMERA_DISTANCE_MAX - e.target.value + CAMERA_DISTANCE_MIN;
-            handleSlider(e);
-          }}
-          style={{ width: 120 }}
-        />
-        <button 
-          onClick={() => adjustCameraDistance(-0.5)} 
-          style={buttonStyle}
-        >
-          ＋
-        </button>
-      </div>
+      {showZoomControls && ( // showZoomControlsがtrueの場合のみ表示
+        <div style={{
+          position: "absolute",
+          top: 150,
+          left: 10,
+          zIndex: 2100,
+          background: "#fff",
+          padding: "12px",
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(153, 125, 125, 0.08)",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px"
+        }}>
+          <button 
+            onClick={() => adjustCameraDistance(0.5)} 
+            style={buttonStyle}
+          >
+            －
+          </button>
+          <input
+            type="range"
+            min={CAMERA_DISTANCE_MIN}
+            max={CAMERA_DISTANCE_MAX}
+            step={0.1}
+            value={CAMERA_DISTANCE_MAX - cameraDistance + CAMERA_DISTANCE_MIN}
+            onChange={e => {
+              e.target.value = CAMERA_DISTANCE_MAX - e.target.value + CAMERA_DISTANCE_MIN;
+              handleSlider(e);
+            }}
+            style={{ width: 120 }}
+          />
+          <button 
+            onClick={() => adjustCameraDistance(-0.5)} 
+            style={buttonStyle}
+          >
+            ＋
+          </button>
+        </div>
+      )}
 
       {/* 3Dシーン */}
       <Canvas
@@ -172,7 +191,8 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
           zIndex: 3000,
           boxShadow: "0 4px 24px rgba(0,0,0,0.15)"
         }}>
-          クリア！
+          クリア！<br />
+          タイム: {time.toFixed(2)}秒
         </div>
       )}
 
@@ -191,12 +211,15 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
         alignItems: "center",
         gap: "10px"
       }}>
-        <button onClick={() => randomRotate()} style={buttonStyle}>
-          ランダム回転
-        </button>
+        {/* ストップウォッチ表示 */}
+        {gameStarted && !isCleared && (
+          <div style={{ fontSize: "1.2rem", fontWeight: "bold", color: "#333" }}>
+            タイム: {time.toFixed(2)}秒
+          </div>
+        )}
 
-        <button onClick={judgeCleared} style={buttonStyle}>
-          クリア判定
+        <button onClick={handleGameStart} style={buttonStyle} disabled={gameStarted && !isCleared}>
+          {gameStarted && !isCleared ? "ゲーム中" : "ゲームスタート"}
         </button>
 
         <button
@@ -210,18 +233,12 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
           {lockPolar ? "回転軸固定" : "回転自由"}
         </button>
 
+        {/* ズームコントロール表示切り替えボタン */}
         <button
           style={buttonStyle}
-          onClick={() => rotateEntireCube("x", true)}
+          onClick={toggleZoomControls}
         >
-          X軸全体90度回転
-        </button>
-
-        <button
-          style={buttonStyle}
-          onClick={() => rotateEntireCube("y", true)}
-        >
-          Y軸全体90度回転
+          {showZoomControls ? "ズーム非表示" : "ズーム表示"}
         </button>
 
         <button
@@ -229,13 +246,6 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
           onClick={() => rotateEntireCube("z", true)}
         >
           Z軸全体90度回転
-        </button>
-
-        <button
-          onClick={resetCube}
-          style={{ ...buttonStyle, backgroundColor: '#ff6b6b' }}
-        >
-          リセット
         </button>
       </div>
 
