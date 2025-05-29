@@ -65,6 +65,7 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
     CAMERA_DISTANCE_MAX,
     showZoomControls, // showZoomControlsをインポート
     toggleZoomControls, // toggleZoomControlsをインポート
+    setDisableOrbitRotation, // setDisableOrbitRotationをインポート
   } = useCameraControls();
 
   // ドラッグ回転（judgeCleared関数を渡す）
@@ -78,7 +79,8 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
     setRotationAngle,
     setRotationLayer,
     setDebugInfo,
-    judgeCleared // judgeClearedはuseCubeStateでstopStopwatchを呼ぶようになる
+    judgeCleared, // judgeClearedはuseCubeStateでstopStopwatchを呼ぶようになる
+    setDisableOrbitRotation // setDisableOrbitRotationをuseDragRotationに渡す
   );
 
   // ゲームスタートハンドラ

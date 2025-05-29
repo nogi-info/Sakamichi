@@ -14,6 +14,7 @@ import { rotateFace } from "../utils/cubeUtils";
  * @param {Function} setRotationLayer - 回転レイヤーの更新関数
  * @param {Function} setDebugInfo - デバッグ情報の更新関数
  * @param {Function} judgeCleared - クリア判定関数
+ * @param {Function} setDisableOrbitRotation - OrbitControlsの回転を無効化する関数 (追加)
  */
 export function useDragRotation(
   cubelets,
@@ -25,7 +26,8 @@ export function useDragRotation(
   setRotationAngle,
   setRotationLayer,
   setDebugInfo,
-  judgeCleared
+  judgeCleared,
+  setDisableOrbitRotation // setDisableOrbitRotationを引数に追加
 ) {
   // ドラッグ関連のref
   const dragStartRef = useRef({ x: 0, y: 0 });
@@ -143,7 +145,13 @@ export function useDragRotation(
       c.position[2] === event.object.position.z
     );
     
-    if (!cubelet || event.nativeEvent.button !== 0) return;
+    // event.nativeEvent.button !== 0 のチェックを削除
+    if (!cubelet) return;
+
+    // キューブレットがクリックされたらOrbitControlsの回転を無効化 (追加)
+    if (setDisableOrbitRotation) {
+      setDisableOrbitRotation(true);
+    }
 
     // ドラッグ開始情報を記録
     dragStartRef.current = { 
@@ -183,7 +191,7 @@ export function useDragRotation(
       point: event.object.position ? event.object.position.toArray() : null,
       normal: worldNormal ? worldNormal.toArray() : null,
     });
-  }, [cubelets, isRotating, determineDragPlane, setRotationAxis, setRotationAngle, setRotatingCubelets, setRotationLayer, setDebugInfo]);
+  }, [cubelets, isRotating, setDisableOrbitRotation, determineDragPlane, setRotationAxis, setRotationAngle, setRotatingCubelets, setRotationLayer, setDebugInfo]);
 
   /**
    * ポインター移動処理
@@ -265,7 +273,13 @@ export function useDragRotation(
    * ポインター離し処理
    */
   const handlePointerUp = useCallback(() => {
-    if (!isDraggingRef.current) return;
+    if (!isDraggingRef.current) {
+      // ドラッグ操作がなかった場合でもOrbitControlsを再有効化 (追加)
+      if (setDisableOrbitRotation) {
+        setDisableOrbitRotation(false);
+      }
+      return;
+    }
 
     if (dragStartRef.current._rotated) {
       const { axis, layer, clockwise } = dragStartRef.current._rotated;
@@ -295,7 +309,12 @@ export function useDragRotation(
     dragPlaneRef.current = null;
     dragStartRef.current._rotated = undefined;
     dragStartRef.current._cubeletId = undefined;
-  }, [setCubelets, setIsRotating, setRotatingCubelets, setRotationAngle, setRotationAxis, setRotationLayer, setDebugInfo]);
+
+    // OrbitControlsの回転を再有効化 (追加)
+    if (setDisableOrbitRotation) {
+      setDisableOrbitRotation(false);
+    }
+  }, [setCubelets, setIsRotating, setRotatingCubelets, setRotationAngle, setRotationAxis, setRotationLayer, setDebugInfo, setDisableOrbitRotation]); // 依存配列にsetDisableOrbitRotationを追加
 
   return {
     handleCubeletClick,
