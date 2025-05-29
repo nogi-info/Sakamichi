@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import Papa from "papaparse"; // papaparseを直接インポート
 
 // コンポーネント
 import Cubelet from "../utils/Cubelet";
@@ -12,12 +13,67 @@ import DebugPanel from "./DebugPanel";
 import { useCubeState } from "../hooks/useCubeState";
 import { useDragRotation } from "../hooks/useDragRotation";
 import { useCameraControls } from "../hooks/useCameraControls";
-import { useStopwatch } from "../hooks/useStopwatch"; // Stopwatchフックをインポート
+import { useStopwatch } from "../hooks/useStopwatch";
 
 // スタイル
 import buttonStyle from "../../../styles/buttonStyle";
 
-function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
+// CSVファイルへのパス
+const CSV_FILE_PATH = "/Sakamichi/data/sakamichi_combined.csv"; // CSVファイルのパスを適宜修正してください
+
+function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
+  // faceKanjiをstateで管理し、初期値はinitialFaceKanjiとする
+  const [faceKanji, setFaceKanji] = useState(initialFaceKanji); 
+
+  // CSVデータの読み込みとfaceKanjiの設定ロジックを関数として定義
+  const loadAndSetRandomFaceKanji = async () => {
+    try {
+      const response = await fetch(CSV_FILE_PATH);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const csvText = await response.text();
+      
+      // PapaParseを使用してCSVをパース
+      Papa.parse(csvText, {
+        header: true, // ヘッダー行をオブジェクトのキーとして使用
+        skipEmptyLines: true,
+        complete: (results) => {
+          const dataRows = results.data;
+
+          if (dataRows.length === 0) {
+            console.warn("CSVファイルにデータ行がありません。");
+            setFaceKanji(initialFaceKanji); // データがない場合は初期値を使用
+            return;
+          }
+
+          // ランダムに1行を選択
+          const randomIndex = Math.floor(Math.random() * dataRows.length);
+          const selectedRow = dataRows[randomIndex];
+          
+          // グループ名と名前を連結
+          // CSVのヘッダーが 'グループ名' と '名前' であることを想定
+          const groupName = selectedRow['グループ名'] ? selectedRow['グループ名'].trim() : '';
+          const name = selectedRow['名前'] ? selectedRow['名前'].trim() : '';
+
+          const combinedString = groupName + name;
+          const newFaceKanji = combinedString.substring(0, 6); // 左から6文字
+
+          setFaceKanji(newFaceKanji || initialFaceKanji); // 文字列が空の場合に備えて初期値をフォールバック
+          console.log(`設定されたfaceKanji: ${newFaceKanji}`);
+        },
+        error: (err) => {
+          console.error("PapaParseエラー:", err);
+          setFaceKanji(initialFaceKanji); // エラー時は初期値を使用
+        }
+      });
+
+    } catch (error) {
+      console.error("CSVファイルの読み込みまたはパース中にエラーが発生しました:", error);
+      setFaceKanji(initialFaceKanji); // エラー時は初期値を使用
+    }
+  };
+
   // デバッグ状態
   const [showDebug, setShowDebug] = useState(false);
   const [showAxes, setShowAxes] = useState(false);
@@ -27,6 +83,7 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
   const { time, startStopwatch, stopStopwatch, resetStopwatch } = useStopwatch();
 
   // キューブ状態管理
+  // faceKanjiをuseCubeStateに渡す
   const {
     cubelets,
     setCubelets,
@@ -43,14 +100,14 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
     isCleared,
     faceTextures,
     staticCubelets,
-    resetCube,
+    resetCube, // resetCube関数を取得
     rotateCubeFace,
     rotateEntireCube,
     randomRotate,
     judgeCleared,
-    gameStarted, // gameStartedの状態を追加
-    setGameStarted, // setGameStartedのセッターを追加
-  } = useCubeState(faceKanji, stopStopwatch); // stopStopwatchをuseCubeStateに渡す
+    gameStarted,
+    setGameStarted,
+  } = useCubeState(faceKanji, stopStopwatch); 
 
   // カメラ制御
   const {
@@ -63,12 +120,12 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
     getOrbitControlsConfig,
     CAMERA_DISTANCE_MIN,
     CAMERA_DISTANCE_MAX,
-    showZoomControls, // showZoomControlsをインポート
-    toggleZoomControls, // toggleZoomControlsをインポート
-    setDisableOrbitRotation, // setDisableOrbitRotationをインポート
+    showZoomControls,
+    toggleZoomControls,
+    setDisableOrbitRotation,
   } = useCameraControls();
 
-  // ドラッグ回転（judgeCleared関数を渡す）
+  // ドラッグ回転
   const { handleCubeletClick, handlePointerMove, handlePointerUp } = useDragRotation(
     cubelets,
     setCubelets,
@@ -79,15 +136,17 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
     setRotationAngle,
     setRotationLayer,
     setDebugInfo,
-    judgeCleared, // judgeClearedはuseCubeStateでstopStopwatchを呼ぶようになる
-    setDisableOrbitRotation // setDisableOrbitRotationをuseDragRotationに渡す
+    judgeCleared,
+    setDisableOrbitRotation
   );
 
   // ゲームスタートハンドラ
   const handleGameStart = async () => {
-    resetStopwatch(); // ストップウォッチをリセット
-    await randomRotate(); // ランダム回転を実行
+    resetCube(); // ゲームスタート時にキューブの状態をリセットし、クリア表示を非表示にする (追加)
+    resetStopwatch();
     setGameStarted(true); // ゲーム開始状態をtrueに
+    await loadAndSetRandomFaceKanji(); // CSVからfaceKanjiをロード
+    await randomRotate(); // ランダム回転を実行
     startStopwatch(); // ストップウォッチを開始
   };
 
@@ -98,7 +157,7 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
       onPointerUp={handlePointerUp}
     >
       {/* ズームコントロール */}
-      {showZoomControls && ( // showZoomControlsがtrueの場合のみ表示
+      {showZoomControls && (
         <div style={{
           position: "absolute",
           top: 150,
@@ -215,7 +274,7 @@ function RubiksCube({ faceKanji = "乃木櫻日向坂" }) {
       }}>
         {/* ストップウォッチ表示 */}
         {gameStarted && !isCleared && (
-          <div style={{ fontSize: "1.2rem", fontWeight: "bold", color: "#333" }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
             タイム: {time.toFixed(2)}秒
           </div>
         )}
