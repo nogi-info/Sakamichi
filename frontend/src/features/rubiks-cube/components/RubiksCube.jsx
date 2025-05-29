@@ -56,7 +56,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
           const groupName = selectedRow['グループ名'] ? selectedRow['グループ名'].trim() : '';
           const name = selectedRow['名前'] ? selectedRow['名前'].trim() : '';
 
-          const combinedString = groupName + name;
+          const combinedString = name + groupName;
           const newFaceKanji = combinedString.substring(0, 6); // 左から6文字
 
           setFaceKanji(newFaceKanji || initialFaceKanji); // 文字列が空の場合に備えて初期値をフォールバック
