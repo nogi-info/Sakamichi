@@ -11,9 +11,10 @@ import { isCubeSolved } from "../utils/cubeCheckUtils";
 /**
  * ルービックキューブの基本状態を管理するカスタムフック
  * @param {string} faceKanji - 各面に表示する漢字文字列
+ * @param {number} difficulty - 難易度 (1: 色のみ, 2: 文字+色, 3: 文字のみ)
  * @param {function} stopStopwatch - ストップウォッチを停止する関数
  */
-export function useCubeState(faceKanji = "乃木櫻日向坂", stopStopwatch) { // stopStopwatchを引数として受け取る
+export function useCubeState(faceKanji = "乃木櫻日向坂", difficulty, stopStopwatch) { // difficultyを引数として受け取る
   // キューブレットの状態
   const [cubelets, setCubelets] = useState(createInitialCubelets());
   const [initialCubelets, setInitialCubelets] = useState(() => createInitialCubelets());
@@ -34,17 +35,19 @@ export function useCubeState(faceKanji = "乃木櫻日向坂", stopStopwatch) { 
     const kanjiArr = faceKanji.slice(0, 6).split("");
     const textures = {};
     FACE_NAMES.forEach((face, i) => {
-      textures[face] = createFaceTextures(kanjiArr[i], face);
+      // createFaceTextures に difficulty を渡す
+      textures[face] = createFaceTextures(kanjiArr[i], face, difficulty);
     });
     return textures;
-  }, [faceKanji]);
+  }, [faceKanji, difficulty]); // difficultyが変更されたら再生成
 
   // 初期状態のfaceTexturesもstateで保持
   const [initialFaceTextures, setInitialFaceTextures] = useState(() => {
     const kanjiArr = faceKanji.slice(0, 6).split("");
     const textures = {};
     FACE_NAMES.forEach((face, i) => {
-      textures[face] = createFaceTextures(kanjiArr[i], face);
+      // createFaceTextures に difficulty を渡す
+      textures[face] = createFaceTextures(kanjiArr[i], face, difficulty);
     });
     return textures;
   });
@@ -117,13 +120,14 @@ export function useCubeState(faceKanji = "乃木櫻日向坂", stopStopwatch) { 
   const judgeCleared = useCallback(async () => {
     // ゲームが開始されていない場合は何もしない
     if (!gameStarted) return;
-    const allMatch = isCubeSolved(cubelets);
+    // isCubeSolved に difficulty を渡す
+    const allMatch = isCubeSolved(cubelets, difficulty); 
     setIsCleared(allMatch);
     if (allMatch && stopStopwatch) { // キューブがクリアされたらストップウォッチを停止
       stopStopwatch();
     }
     return allMatch;
-  }, [cubelets, stopStopwatch]); // 依存配列にstopStopwatchを追加
+  }, [cubelets, difficulty, stopStopwatch, gameStarted]); // 依存配列にdifficultyを追加
 
   /**
    * 静的なキューブレット（回転中でないもの）を取得

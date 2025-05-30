@@ -24,6 +24,9 @@ const CSV_FILE_PATH = "/Sakamichi/data/sakamichi_combined.csv"; // CSVファイ�
 function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
   // faceKanjiをstateで管理し、初期値はinitialFaceKanjiとする
   const [faceKanji, setFaceKanji] = useState(initialFaceKanji); 
+  // 難易度を管理するstateを追加し、初期値をLevel 2 (2) に設定
+  // Level 1: 文字なし色あり, Level 2: 文字あり色あり, Level 3: 文字あり色なし
+  const [difficulty, setDifficulty] = useState(2); 
 
   // CSVデータの読み込みとfaceKanjiの設定ロジックを関数として定義
   const loadAndSetRandomFaceKanji = async () => {
@@ -83,7 +86,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
   const { time, startStopwatch, stopStopwatch, resetStopwatch } = useStopwatch();
 
   // キューブ状態管理
-  // faceKanjiをuseCubeStateに渡す
+  // faceKanjiとdifficultyをuseCubeStateに渡す
   const {
     cubelets,
     setCubelets,
@@ -107,7 +110,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     judgeCleared,
     gameStarted,
     setGameStarted,
-  } = useCubeState(faceKanji, stopStopwatch); 
+  } = useCubeState(faceKanji, difficulty, stopStopwatch); // difficultyを引数として追加
 
   // カメラ制御
   const {
@@ -283,6 +286,40 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
         <button onClick={handleGameStart} style={buttonStyle} disabled={gameStarted && !isCleared}>
           {gameStarted && !isCleared ? "ゲーム中" : "ゲームスタート"}
         </button>
+
+        {/* 難易度選択 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginTop: "10px" }}>
+          <label>
+            <input
+              type="radio"
+              value={1}
+              checked={difficulty === 1}
+              onChange={() => setDifficulty(1)}
+              disabled={gameStarted && !isCleared}
+            />
+            Level 1 (色のみ)
+          </label>
+          <label>
+            <input
+              type="radio"
+              value={2}
+              checked={difficulty === 2}
+              onChange={() => setDifficulty(2)}
+              disabled={gameStarted && !isCleared}
+            />
+            Level 2 (文字+色)
+          </label>
+          <label>
+            <input
+              type="radio"
+              value={3}
+              checked={difficulty === 3}
+              onChange={() => setDifficulty(3)}
+              disabled={gameStarted && !isCleared}
+            />
+            Level 3 (文字のみ)
+          </label>
+        </div>
 
         {/* <button
           style={{

@@ -4,7 +4,8 @@ import * as THREE from "three";
 export const FACE_NAMES = ["front", "back", "right", "left", "top", "bottom"];
 
 // 1面を3x3に分割したテクスチャ配列を生成
-export function createFaceTextures(kanji, faceName, size = 192) {
+// difficultyを引数に追加
+export function createFaceTextures(kanji, faceName, difficulty, size = 192) {
   const FACE_COLORS = {
     front: "#ffffff",
     back: "#ffff00",
@@ -13,17 +14,30 @@ export function createFaceTextures(kanji, faceName, size = 192) {
     top: "#0000ff",
     bottom: "#00ff00"
   };
+
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = FACE_COLORS[faceName] || "#fff";
-  ctx.fillRect(0, 0, size, size);
-  ctx.font = `${size * 0.9}px serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "#222";
-  ctx.fillText(kanji, size / 2, size / 2);
+  // 背景色の設定
+  // Level 1, Level 2: 通常の6色
+  if (difficulty === 1 || difficulty === 2) { 
+    ctx.fillStyle = FACE_COLORS[faceName] || "#fff";
+    ctx.fillRect(0, 0, size, size);
+  } else if (difficulty === 3) { // Level 3: 全て白
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, size, size);
+  }
+
+  // 文字の描画
+  // Level 2, Level 3: 文字あり
+  if (difficulty === 2 || difficulty === 3) { 
+    ctx.font = `${size * 0.9}px serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#222"; // 文字の色
+    ctx.fillText(kanji, size / 2, size / 2);
+  }
 
   const cell = size / 3;
   const textures = [];

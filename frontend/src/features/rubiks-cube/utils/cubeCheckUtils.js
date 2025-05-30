@@ -3,9 +3,10 @@ import * as THREE from "three";
 /**
  * ルービックキューブの各面が元の状態に戻ったかを判定する関数
  * @param {Array} cubelets - 現在のcubelets配列
+ * @param {number} difficulty - 難易度 (1: 色のみ, 2: 文字+色, 3: 文字のみ)
  * @returns {boolean} - 全ての面が元の状態に戻っていればtrue
  */
-export function isCubeSolved(cubelets) {
+export function isCubeSolved(cubelets, difficulty) { // difficultyを引数に追加
   // 6面をチェック（外から見える面のみ）
   const faces = [
     { axis: 'x', value: -1 }, // left face
@@ -17,7 +18,8 @@ export function isCubeSolved(cubelets) {
   ];
 
   for (const face of faces) {
-    if (!isFaceSolved(cubelets, face.axis, face.value)) {
+    // isFaceSolved に difficulty を渡す
+    if (!isFaceSolved(cubelets, face.axis, face.value, difficulty)) {
       return false;
     }
   }
@@ -30,9 +32,10 @@ export function isCubeSolved(cubelets) {
  * @param {Array} cubelets - 現在のcubelets配列
  * @param {string} axis - 'x', 'y', 'z'のいずれか
  * @param {number} value - -1または1
+ * @param {number} difficulty - 難易度 (1: 色のみ, 2: 文字+色, 3: 文字のみ)
  * @returns {boolean} - その面が元の状態に戻っていればtrue
  */
-function isFaceSolved(cubelets, axis, value) {
+function isFaceSolved(cubelets, axis, value, difficulty) { // difficultyを引数に追加
   // 1. 指定した面のcubeletを抽出
   const faceCubelets = cubelets.filter(cubelet => {
     return cubelet.position[getAxisIndex(axis)] === value;
@@ -54,7 +57,12 @@ function isFaceSolved(cubelets, axis, value) {
     return false;
   }
 
-  // 4. 向きが全て同じかチェック
+  // 4. 難易度が1の場合は向きの判定をスキップしてtrueを返す
+  if (difficulty === 1) {
+    return true;
+  }
+
+  // 5. 向きが全て同じかチェック (difficultyが1でない場合のみ実行)
   if (!areOrientationsCorrect(faceCubelets)) {
     return false;
   }
@@ -178,6 +186,6 @@ function calculateOrientationVectors(cubelet) {
  */
 function vectorsEqual(v1, v2, tolerance = 1e-6) {
   return Math.abs(v1.x - v2.x) < tolerance &&
-         Math.abs(v1.y - v2.y) < tolerance &&
-         Math.abs(v1.z - v2.z) < tolerance;
+           Math.abs(v1.y - v2.y) < tolerance &&
+           Math.abs(v1.z - v2.z) < tolerance;
 }
