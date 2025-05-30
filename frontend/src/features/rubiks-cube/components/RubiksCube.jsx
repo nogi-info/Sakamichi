@@ -247,6 +247,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
           color: "#1976d2",
           fontSize: "2rem",
           fontWeight: "bold",
+          textAlign: "center",
           padding: "32px 48px",
           borderRadius: "16px",
           zIndex: 3000,
@@ -260,7 +261,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
       {/* コントロールパネル */}
       <div style={{
         position: "absolute",
-        top: 250,
+        top: 150,
         left: 10,
         zIndex: 2100,
         background: "#fff",
@@ -283,7 +284,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
           {gameStarted && !isCleared ? "ゲーム中" : "ゲームスタート"}
         </button>
 
-        <button
+        {/* <button
           style={{
             ...buttonStyle,
             background: lockPolar ? "#1976d2" : "#aaa",
@@ -292,22 +293,22 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
           onClick={togglePolarLock}
         >
           {lockPolar ? "回転軸固定" : "回転自由"}
-        </button>
+        </button> */}
 
         {/* ズームコントロール表示切り替えボタン */}
-        <button
+        {/* <button
           style={buttonStyle}
           onClick={toggleZoomControls}
         >
           {showZoomControls ? "ズーム非表示" : "ズーム表示"}
-        </button>
+        </button> */}
 
-        <button
+        {/* <button
           style={buttonStyle}
           onClick={() => rotateEntireCube("z", true)}
         >
           Z軸全体90度回転
-        </button>
+        </button> */}
       </div>
 
       {/* デバッグパネル */}

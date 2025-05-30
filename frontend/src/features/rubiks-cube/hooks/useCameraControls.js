@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { useState, useCallback, useRef } from "react";
 
 // カメラの制約定数
-const CAMERA_DISTANCE_MIN = 3;
-const CAMERA_DISTANCE_MAX = 20;
+const CAMERA_DISTANCE_MIN = 5;
+const CAMERA_DISTANCE_MAX = 10;
 
 /**
  * カメラの制御を管理するカスタムフック
@@ -96,7 +96,7 @@ export function useCameraControls() {
   const getOrbitControlsConfig = useCallback(() => ({
     ref: orbitRef,
     enablePan: false,
-    enableZoom: showZoomControls, // showZoomControlsの状態に基づいてズームを有効/無効にする
+    enableZoom: true, // showZoomControlsの状態によらず有効
     enableRotate: !disableOrbitRotation, // disableOrbitRotationの状態に基づいて回転を有効/無効にする
     mouseButtons:{
       LEFT: THREE.MOUSE.ROTATE, // 左クリックでカメラ回転

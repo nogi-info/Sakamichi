@@ -115,6 +115,8 @@ export function useCubeState(faceKanji = "乃木櫻日向坂", stopStopwatch) { 
    * クリア判定を実行
    */
   const judgeCleared = useCallback(async () => {
+    // ゲームが開始されていない場合は何もしない
+    if (!gameStarted) return;
     const allMatch = isCubeSolved(cubelets);
     setIsCleared(allMatch);
     if (allMatch && stopStopwatch) { // キューブがクリアされたらストップウォッチを停止
