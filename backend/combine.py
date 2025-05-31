@@ -29,6 +29,18 @@ def convert_kanji_to_number(text):
         text = text.replace(kanji, number)
     return text
 
+# 除外メンバーリストの読み込み
+try:
+    with open("backend/handmade/除外メンバー_handmade.csv", "r", encoding="utf-8") as f:
+        # 各行の名前をstrip()で空白を除去し、リストに格納
+        excluded_members = [line.strip() for line in f if line.strip()]
+except FileNotFoundError:
+    excluded_members = []
+    print("除外メンバーリスト 'backend/tables/除外メンバー_handmade.csv' が見つかりませんでした。")
+except Exception as e:
+    excluded_members = []
+    print(f"除外メンバーリストの読み込み中にエラーが発生しました: {e}")
+
 # 各CSVファイルを処理
 for file in csv_files:
     # グループ名をファイル名から取得
@@ -96,6 +108,11 @@ for file in csv_files:
 
 # すべてのデータを結合
 final_df = pd.concat(processed_data, ignore_index=True)
+
+# 除外メンバーリストに基づいて行をフィルタリング
+if excluded_members:
+    final_df = final_df[~final_df["名前"].isin(excluded_members)]
+    print(f"以下のメンバーは除外されました: {', '.join(excluded_members)}")
 
 # 結合したデータをCSVに出力
 final_df.to_csv("sakamichi_combined.csv", index=False, encoding="utf-8-sig")
