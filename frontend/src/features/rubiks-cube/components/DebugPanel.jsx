@@ -15,6 +15,10 @@ function DebugPanel({
 }) {
   const [showDebug, setShowDebug] = useState(false);
 
+  if (!isDebugMode) {
+    return null; // デバッグモードが無効な場合は何も表示しない
+  }
+
   if (!showDebug) {
     return (
       <button
@@ -36,9 +40,6 @@ function DebugPanel({
         デバッグ表示
       </button>
     );
-  }
-  if (!isDebugMode) {
-    return null; // デバッグモードが無効な場合は何も表示しない
   }
   return (
     <>
