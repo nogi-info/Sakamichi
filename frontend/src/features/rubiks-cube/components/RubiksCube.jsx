@@ -24,12 +24,13 @@ const CSV_FILE_PATH = "/Sakamichi/data/sakamichi_combined.csv";
 // 時間表示のヘルパー関数
 const formatTime = (seconds) => {
   if (seconds < 60) {
-    return `${seconds.toFixed(2)}秒`;
+    // 小数点以下を表示しないように変更
+    return `${Math.floor(seconds)}秒`;
   } else {
     const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    // 残り秒数を2桁表示（整数部）にし、小数点以下2桁も表示
-    const formattedRemainingSeconds = remainingSeconds < 10 ? `0${remainingSeconds.toFixed(2)}` : remainingSeconds.toFixed(2);
+    const remainingSeconds = Math.floor(seconds % 60); // 小数点以下を表示しないように変更
+    // 残り秒数を2桁表示（整数部）
+    const formattedRemainingSeconds = remainingSeconds < 10 ? `0${remainingSeconds}` : `${remainingSeconds}`;
     return `${minutes}分${formattedRemainingSeconds}秒`;
   }
 };
@@ -270,7 +271,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
           gap: "10px" // 間隔を狭める
         }}>
           <div style={{ fontSize: "2rem", whiteSpace: "nowrap" }}>クリア！</div> {/* 改行防止 */}
-          <div style={{ fontSize: "1.5rem" }}>タイム: {formatTime(time)}</div> {/* フォーマット適用 */}
+          <div style={{ fontSize: "1.5rem", whiteSpace: "nowrap" }}>{formatTime(time)}</div> {/* フォーマット適用 */}
           <button onClick={handleRetry} style={buttonStyle}>
             もう一度プレイ
           </button>
