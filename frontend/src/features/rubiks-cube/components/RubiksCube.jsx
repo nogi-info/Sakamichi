@@ -20,6 +20,7 @@ import buttonStyle from "../../../styles/buttonStyle";
 
 // CSVファイルへのパス
 const CSV_FILE_PATH = "/Sakamichi/data/sakamichi_combined.csv";
+const GROUP_CSV_FILE_PATH = "/Sakamichi/data/sakamichi_group.csv";
 
 // 時間表示のヘルパー関数
 const formatTime = (seconds) => {
@@ -38,6 +39,33 @@ const formatTime = (seconds) => {
 function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
   const [faceKanji, setFaceKanji] = useState(initialFaceKanji); 
   const [difficulty, setDifficulty] = useState(2); // 初期値をLevel 2に設定
+  const [groupData, setGroupData] = useState([]); // グループCSVデータを保持するstate
+
+  // グループCSVデータを読み込むuseEffect
+  useEffect(() => {
+    const loadGroupData = async () => {
+      try {
+        const response = await fetch(GROUP_CSV_FILE_PATH);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const csvText = await response.text();
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            setGroupData(results.data);
+          },
+          error: (err) => {
+            console.error("PapaParse error loading group data:", err);
+          }
+        });
+      } catch (error) {
+        console.error("Error loading group data:", error);
+      }
+    };
+    loadGroupData();
+  }, []); // コンポーネントマウント時に一度だけ実行
 
   const loadAndSetRandomFaceKanji = async () => {
     try {
@@ -62,14 +90,26 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
           const randomIndex = Math.floor(Math.random() * dataRows.length);
           const selectedRow = dataRows[randomIndex];
           
-          const groupName = selectedRow['グループ名'] ? selectedRow['グループ名'].trim() : '';
+          let groupName = selectedRow['グループ名'] ? selectedRow['グループ名'].trim() : '';
           const name = selectedRow['名前'] ? selectedRow['名前'].trim() : '';
 
-          const combinedString = name + groupName;
+          // sakamichi_group.csvからグループ情報を検索し、置換判定
+          const today = new Date(); // 現在の日付
+          const gradDateStr = selectedRow['卒業・辞退・契約終了日'] ? selectedRow['卒業・辞退・契約終了日'].trim() : '-';
+          const gradDate = gradDateStr === '-' ? today : new Date(gradDateStr); // ハイフンの場合はそのまま、日付形式に変換
+          const matchingGroup = groupData.find(group => group['グループ名'] === groupName);
+
+          if (matchingGroup) {
+            // 現在の日付が期間内にあるか判定
+            if (gradDate >= new Date(matchingGroup['開始日']) && gradDate <= new Date(matchingGroup['終了日'])) {
+              groupName = matchingGroup['旧グループ名']; // 旧グループ名に置換
+            }
+          }
+
+          const combinedString = name + groupName; // 置換後のグループ名を使用
           const newFaceKanji = combinedString.substring(0, 6);
 
           setFaceKanji(newFaceKanji || initialFaceKanji);
-          console.log(`設定されたfaceKanji: ${newFaceKanji}`);
         },
         error: (err) => {
           console.error("PapaParseエラー:", err);
