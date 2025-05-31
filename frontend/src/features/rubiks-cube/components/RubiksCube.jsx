@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import Papa from "papaparse"; // papaparseを直接インポート
+import Papa from "papaparse";
 
 // コンポーネント
 import Cubelet from "../utils/Cubelet";
@@ -19,16 +19,25 @@ import { useStopwatch } from "../hooks/useStopwatch";
 import buttonStyle from "../../../styles/buttonStyle";
 
 // CSVファイルへのパス
-const CSV_FILE_PATH = "/Sakamichi/data/sakamichi_combined.csv"; // CSVファイルのパスを適宜修正してください
+const CSV_FILE_PATH = "/Sakamichi/data/sakamichi_combined.csv";
+
+// 時間表示のヘルパー関数
+const formatTime = (seconds) => {
+  if (seconds < 60) {
+    return `${seconds.toFixed(2)}秒`;
+  } else {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    // 残り秒数を2桁表示（整数部）にし、小数点以下2桁も表示
+    const formattedRemainingSeconds = remainingSeconds < 10 ? `0${remainingSeconds.toFixed(2)}` : remainingSeconds.toFixed(2);
+    return `${minutes}分${formattedRemainingSeconds}秒`;
+  }
+};
 
 function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
-  // faceKanjiをstateで管理し、初期値はinitialFaceKanjiとする
   const [faceKanji, setFaceKanji] = useState(initialFaceKanji); 
-  // 難易度を管理するstateを追加し、初期値をLevel 2 (2) に設定
-  // Level 1: 文字なし色あり, Level 2: 文字あり色あり, Level 3: 文字あり色なし
-  const [difficulty, setDifficulty] = useState(2); 
+  const [difficulty, setDifficulty] = useState(2); // 初期値をLevel 2に設定
 
-  // CSVデータの読み込みとfaceKanjiの設定ロジックを関数として定義
   const loadAndSetRandomFaceKanji = async () => {
     try {
       const response = await fetch(CSV_FILE_PATH);
@@ -37,56 +46,48 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
       }
       const csvText = await response.text();
       
-      // PapaParseを使用してCSVをパース
       Papa.parse(csvText, {
-        header: true, // ヘッダー行をオブジェクトのキーとして使用
+        header: true,
         skipEmptyLines: true,
         complete: (results) => {
           const dataRows = results.data;
 
           if (dataRows.length === 0) {
             console.warn("CSVファイルにデータ行がありません。");
-            setFaceKanji(initialFaceKanji); // データがない場合は初期値を使用
+            setFaceKanji(initialFaceKanji);
             return;
           }
 
-          // ランダムに1行を選択
           const randomIndex = Math.floor(Math.random() * dataRows.length);
           const selectedRow = dataRows[randomIndex];
           
-          // グループ名と名前を連結
-          // CSVのヘッダーが 'グループ名' と '名前' であることを想定
           const groupName = selectedRow['グループ名'] ? selectedRow['グループ名'].trim() : '';
           const name = selectedRow['名前'] ? selectedRow['名前'].trim() : '';
 
           const combinedString = name + groupName;
-          const newFaceKanji = combinedString.substring(0, 6); // 左から6文字
+          const newFaceKanji = combinedString.substring(0, 6);
 
-          setFaceKanji(newFaceKanji || initialFaceKanji); // 文字列が空の場合に備えて初期値をフォールバック
+          setFaceKanji(newFaceKanji || initialFaceKanji);
           console.log(`設定されたfaceKanji: ${newFaceKanji}`);
         },
         error: (err) => {
           console.error("PapaParseエラー:", err);
-          setFaceKanji(initialFaceKanji); // エラー時は初期値を使用
+          setFaceKanji(initialFaceKanji);
         }
       });
 
     } catch (error) {
       console.error("CSVファイルの読み込みまたはパース中にエラーが発生しました:", error);
-      setFaceKanji(initialFaceKanji); // エラー時は初期値を使用
+      setFaceKanji(initialFaceKanji);
     }
   };
 
-  // デバッグ状態
   const [showDebug, setShowDebug] = useState(false);
   const [showAxes, setShowAxes] = useState(false);
   const [debugInfo, setDebugInfo] = useState({});
 
-  // ストップウォッチ
   const { time, startStopwatch, stopStopwatch, resetStopwatch } = useStopwatch();
 
-  // キューブ状態管理
-  // faceKanjiとdifficultyをuseCubeStateに渡す
   const {
     cubelets,
     setCubelets,
@@ -103,16 +104,15 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     isCleared,
     faceTextures,
     staticCubelets,
-    resetCube, // resetCube関数を取得
+    resetCube,
     rotateCubeFace,
     rotateEntireCube,
     randomRotate,
     judgeCleared,
     gameStarted,
     setGameStarted,
-  } = useCubeState(faceKanji, difficulty, stopStopwatch); // difficultyを引数として追加
+  } = useCubeState(faceKanji, difficulty, stopStopwatch);
 
-  // カメラ制御
   const {
     cameraDistance,
     lockPolar,
@@ -128,7 +128,6 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     setDisableOrbitRotation,
   } = useCameraControls();
 
-  // ドラッグ回転
   const { handleCubeletClick, handlePointerMove, handlePointerUp } = useDragRotation(
     cubelets,
     setCubelets,
@@ -143,23 +142,33 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     setDisableOrbitRotation
   );
 
-  // ゲームスタートハンドラ
   const handleGameStart = async () => {
-    resetCube(); // ゲームスタート時にキューブの状態をリセットし、クリア表示を非表示にする (追加)
+    resetCube();
     resetStopwatch();
-    setGameStarted(true); // ゲーム開始状態をtrueに
-    await loadAndSetRandomFaceKanji(); // CSVからfaceKanjiをロード
-    await randomRotate(); // ランダム回転を実行
-    startStopwatch(); // ストップウォッチを開始
+    setGameStarted(true);
+    await loadAndSetRandomFaceKanji();
+    await randomRotate();
+    startStopwatch();
+  };
+
+  const handleRetry = () => {
+    // ここでfaceKanjiを初期値に戻す
+    setFaceKanji(initialFaceKanji); 
+    resetCube(); // キューブの状態をリセット
+    resetStopwatch(); // ストップウォッチをリセット
+    setGameStarted(false); // ゲーム開始状態をfalseに戻す
+    setDifficulty(2); // 難易度を初期値に戻す（任意）
+    // クリア表示はresetCubeでisClearedがfalseになるため自動的に消える
   };
 
   return (
     <div
-      style={{ width: '100%', height: '800px', background: '#f0f0f0' }}
+      style={{ width: '100%', height: '800px', background: '#f0f0f0', position: 'relative' }}
       onContextMenu={e => e.preventDefault()}
       onPointerUp={handlePointerUp}
     >
-      {/* ズームコントロール */}
+      {/* ズームコントロール (コメントアウト) */}
+      {/*
       {showZoomControls && (
         <div style={{
           position: "absolute",
@@ -200,6 +209,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
           </button>
         </div>
       )}
+      */}
 
       {/* 3Dシーン */}
       <Canvas
@@ -243,25 +253,111 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
       {isCleared && (
         <div style={{
           position: "absolute",
-          top: "50%",
+          top: "20px", // ゲーム開始ボタンと同じ位置に
           left: "50%",
-          transform: "translate(-50%, -50%)",
+          transform: "translateX(-50%)", // 中央揃え
           background: "rgba(255,255,255,0.95)",
           color: "#1976d2",
-          fontSize: "2rem",
           fontWeight: "bold",
           textAlign: "center",
           padding: "32px 48px",
           borderRadius: "16px",
           zIndex: 3000,
-          boxShadow: "0 4px 24px rgba(0,0,0,0.15)"
+          boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "10px" // 間隔を狭める
         }}>
-          クリア！<br />
-          タイム: {time.toFixed(2)}秒
+          <div style={{ fontSize: "2rem", whiteSpace: "nowrap" }}>クリア！</div> {/* 改行防止 */}
+          <div style={{ fontSize: "1.5rem" }}>タイム: {formatTime(time)}</div> {/* フォーマット適用 */}
+          <button onClick={handleRetry} style={buttonStyle}>
+            もう一度プレイ
+          </button>
         </div>
       )}
 
-      {/* コントロールパネル */}
+      {/* ゲーム開始用ボタン、難易度選択パネル */}
+      {/* ゲーム開始前 (gameStartedがfalse) のみ表示 */}
+      {!gameStarted && (
+        <div style={{
+          position: "absolute",
+          top: "20px", // 上部に配置
+          left: "50%",
+          transform: "translateX(-50%)", // 中央揃え
+          zIndex: 2200, // 他のパネルより手前に
+          background: "#fff",
+          padding: "20px",
+          borderRadius: "12px",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "15px"
+        }}>
+          {/* ゲーム開始ボタン */}
+          <button onClick={handleGameStart} style={buttonStyle}>
+            ゲームスタート
+          </button>
+
+          {/* 難易度選択 */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <input
+                type="radio"
+                value={1}
+                checked={difficulty === 1}
+                onChange={() => setDifficulty(1)}
+              />
+              Level 1 (色のみ)
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <input
+                type="radio"
+                value={2}
+                checked={difficulty === 2}
+                onChange={() => setDifficulty(2)}
+              />
+              Level 2 (文字+色)
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <input
+                type="radio"
+                value={3}
+                checked={difficulty === 3}
+                onChange={() => setDifficulty(3)}
+              />
+              Level 3 (文字のみ)
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* ゲーム実行中 (gameStartedがtrueかつisClearedがfalse) のみストップウォッチを表示 */}
+      {gameStarted && !isCleared && (
+        <div style={{
+          position: "absolute",
+          top: "20px", // 上部に配置
+          left: "50%",
+          transform: "translateX(-50%)", // 中央揃え
+          zIndex: 2200,
+          background: "#fff",
+          padding: "12px",
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "10px"
+        }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
+            タイム: {formatTime(time)} {/* フォーマット適用 */}
+          </div>
+        </div>
+      )}
+
+      {/* 左上に配置していたコントロールパネルは全てコメントアウト */}
+      {/*
       <div style={{
         position: "absolute",
         top: 150,
@@ -276,52 +372,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
         alignItems: "center",
         gap: "10px"
       }}>
-        {/* ストップウォッチ表示 */}
-        {gameStarted && !isCleared && (
-          <div style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
-            タイム: {time.toFixed(2)}秒
-          </div>
-        )}
-
-        <button onClick={handleGameStart} style={buttonStyle} disabled={gameStarted && !isCleared}>
-          {gameStarted && !isCleared ? "ゲーム中" : "ゲームスタート"}
-        </button>
-
-        {/* 難易度選択 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginTop: "10px" }}>
-          <label>
-            <input
-              type="radio"
-              value={1}
-              checked={difficulty === 1}
-              onChange={() => setDifficulty(1)}
-              disabled={gameStarted && !isCleared}
-            />
-            Level 1 (色のみ)
-          </label>
-          <label>
-            <input
-              type="radio"
-              value={2}
-              checked={difficulty === 2}
-              onChange={() => setDifficulty(2)}
-              disabled={gameStarted && !isCleared}
-            />
-            Level 2 (文字+色)
-          </label>
-          <label>
-            <input
-              type="radio"
-              value={3}
-              checked={difficulty === 3}
-              onChange={() => setDifficulty(3)}
-              disabled={gameStarted && !isCleared}
-            />
-            Level 3 (文字のみ)
-          </label>
-        </div>
-
-        {/* <button
+        <button
           style={{
             ...buttonStyle,
             background: lockPolar ? "#1976d2" : "#aaa",
@@ -330,23 +381,23 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
           onClick={togglePolarLock}
         >
           {lockPolar ? "回転軸固定" : "回転自由"}
-        </button> */}
+        </button>
 
-        {/* ズームコントロール表示切り替えボタン */}
-        {/* <button
+        <button
           style={buttonStyle}
           onClick={toggleZoomControls}
         >
           {showZoomControls ? "ズーム非表示" : "ズーム表示"}
-        </button> */}
+        </button>
 
-        {/* <button
+        <button
           style={buttonStyle}
           onClick={() => rotateEntireCube("z", true)}
         >
           Z軸全体90度回転
-        </button> */}
+        </button>
       </div>
+      */}
 
       {/* デバッグパネル */}
       <DebugPanel

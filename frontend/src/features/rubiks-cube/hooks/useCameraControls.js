@@ -9,7 +9,7 @@ const CAMERA_DISTANCE_MAX = 10;
  * カメラの制御を管理するカスタムフック
  */
 export function useCameraControls() {
-  const [cameraDistance, setCameraDistance] = useState(5);
+  const [cameraDistance, setCameraDistance] = useState(10);
   const [lockPolar, setLockPolar] = useState(false);
   const [lockedPolar, setLockedPolar] = useState(null);
   const [lockedAzimuth, setLockedAzimuth] = useState(null);

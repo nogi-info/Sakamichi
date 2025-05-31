@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import buttonStyle from "../../../styles/buttonStyle";
 
+const isDebugMode = process.env.REACT_APP_DEBUG === 'true';
+
 /**
  * デバッグ機能を提供するパネルコンポーネント
  */
@@ -35,7 +37,9 @@ function DebugPanel({
       </button>
     );
   }
-
+  if (!isDebugMode) {
+    return null; // デバッグモードが無効な場合は何も表示しない
+  }
   return (
     <>
       {/* デバッグ表示切替ボタン */}
