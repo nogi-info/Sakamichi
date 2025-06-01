@@ -1,0 +1,133 @@
+/* Home.css */
+
+.home-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.home-intro-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 40px 24px;
+  text-align: center;
+  margin-bottom: 30px; /* 下にスペース */
+}
+
+.home-title {
+  color: #812990;
+  margin-bottom: 16px;
+  font-size: 2.2em; /* タイトルを少し大きく */
+}
+
+.home-description {
+  font-size: 1.1rem;
+  color: #444;
+  line-height: 1.6;
+}
+
+/* 誕生日セクションの共通スタイル */
+.birthday-section {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 20px 24px;
+  margin-bottom: 30px; /* セクション間のスペース */
+}
+
+.section-title {
+  color: #812990; /* 乃木坂カラー */
+  font-size: 1.8em;
+  margin-top: 0;
+  margin-bottom: 20px;
+  text-align: center;
+  border-bottom: 2px solid #f0f0f0; /* 下線 */
+  padding-bottom: 10px;
+}
+
+/* 本日誕生日のメンバーセクションの強調スタイル */
+.today-birthday-section {
+  background-color: #fff3e0; /* 明るいオレンジ系の背景 */
+  border: 2px solid #ffc107; /* 濃いオレンジのボーダー */
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2); /* 強調された影 */
+  padding: 30px 24px; /* パディングを増やす */
+}
+
+.today-birthday-section .section-title {
+  color: #e65100; /* オレンジ系のタイトル色 */
+  border-bottom-color: #ffb300; /* 下線の色も強調 */
+}
+
+/* メンバーカードリストのスタイル */
+.member-card-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid; /* グリッドレイアウト */
+  gap: 15px; /* カード間の隙間 */
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* レスポンシブなカラム */
+  justify-content: center; /* 中央寄せ */
+}
+
+/* MemberCard.js のスタイルを上書きまたは拡張 */
+.member-card {
+  margin-bottom: 0; /* 親のgapで制御するためマージンをリセット */
+  padding: 15px; /* パディングを調整 */
+  border-radius: 8px; /* 角を丸く */
+}
+
+/* 本日誕生日のMemberCardの強調スタイル */
+.member-card.birthday-today {
+  border: 2px solid #ff9800; /* オレンジ系のボーダー */
+  background-color: #fff9c4; /* 明るい黄色の背景 */
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2); /* 影 */
+  animation: pulse 1.5s infinite alternate; /* 軽くアニメーション */
+}
+
+@keyframes pulse {
+  from {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2);
+  }
+  to {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+  }
+}
+
+/* 誕生日メンバーがいない場合のメッセージ */
+.no-birthday-section {
+  text-align: center;
+  color: #777;
+  font-size: 1.1em;
+  padding: 20px;
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 768px) {
+  .home-intro-card, .birthday-section {
+    padding: 20px 15px;
+  }
+  .home-title {
+    font-size: 1.8em;
+  }
+  .section-title {
+    font-size: 1.5em;
+  }
+  .member-card-list {
+    grid-template-columns: 1fr; /* モバイルでは1カラム */
+  }
+}
+
+@media (max-width: 480px) {
+  .home-intro-card, .birthday-section {
+    padding: 15px 10px;
+  }
+  .home-title {
+    font-size: 1.5em;
+  }
+  .section-title {
+    font-size: 1.3em;
+  }
+}

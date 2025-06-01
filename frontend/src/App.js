@@ -1,6 +1,6 @@
 import React, { useState } from "react"; // useStateをインポート
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom"; // React Routerのコンポーネントをインポート
-import Home from "./pages/Home"; // ホームページのコンポーネントをインポート
+import Home from "./features/home/components/Home"; // ホームページのコンポーネントをインポート
 import MemberListByYear from "./features/member-list/components/MemberListByYear"; // 生年月日順ソートページのコンポーネントをインポート
 import MemberTransition from "./features/member-transition/components/MemberTransition"; // メンバー構成の遷移ページのコンポーネントをインポート
 import RubiksCube from "./features/rubiks-cube/components/RubiksCube"; // ルービックキューブページのコンポーネントをインポート

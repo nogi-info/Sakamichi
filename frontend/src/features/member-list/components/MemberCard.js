@@ -5,6 +5,8 @@ const groupColors = {
   "乃木坂46": "#812990",
   "櫻坂46": "#F19DB5",
   "日向坂46": "#7CC7E8",
+  "欅坂46": "#5eb954", // 欅坂46を追加
+  "けやき坂46": "#5eb954", // けやき坂46を追加
 };
 
 const getJoinPeriodColor = (groupName, joinPeriod) => {
@@ -25,7 +27,8 @@ const calculateAge = (birthDate) => {
   return age;
 };
 
-const MemberCard = ({ member, groupName, links }) => {
+// isBirthdayToday プロパティを追加
+const MemberCard = ({ member, groupName, links, isBirthdayToday = false }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const joinPeriod = member.加入期?.match(/\d+/)?.[0] || "1";
   const age = calculateAge(member.生年月日);
@@ -33,23 +36,25 @@ const MemberCard = ({ member, groupName, links }) => {
   const profileLink = memberLinks.プロフィール;
   const officialLink = memberLinks.公式HP;
 
+  // グループ名の最初の文字を取得（例: 乃、櫻、日）
   const shortGroupName = groupName.charAt(0);
+  // 加入期と組み合わせた表示文字列
   const displayJoinPeriod = `${shortGroupName}-${joinPeriod}`;
 
   return (
     <li
+      className={`member-card ${isBirthdayToday ? 'birthday-today' : ''}`} // クラスを追加
       style={{
-        marginBottom: "10px",
-        padding: "10px",
-        borderRadius: "5px",
+        // インラインスタイルはCSSクラスに移行し、必要なものだけ残す
         backgroundColor: "#fff",
         boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
         transition: "transform 0.2s",
         cursor: "pointer",
         display: "flex",
         flexDirection: "column",
+        // isBirthdayToday のスタイルは Home.css で定義
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+      onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.03)")} // 少し控えめなホバー効果
       onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
       onClick={() => setIsExpanded(!isExpanded)}
     >
@@ -102,7 +107,6 @@ const MemberCard = ({ member, groupName, links }) => {
 
       {isExpanded && ( // クリックされた場合に表示される情報
         <>
-          {/* よみは常に表示になったため、ここから削除 */}
           <div style={{ display: "flex", gap: "10px", marginTop: "5px" }}>
             {profileLink && (
               <a href={profileLink} target="_blank" rel="noopener noreferrer" style={{ color: "#007bff" }}>
