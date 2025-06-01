@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/Sakamichi/static/css/main.4f31d33f.css",
-    "main.js": "/Sakamichi/static/js/main.6672db8e.js",
+    "main.css": "/Sakamichi/static/css/main.cbabd4ce.css",
+    "main.js": "/Sakamichi/static/js/main.a690df80.js",
     "static/js/453.8ab44547.chunk.js": "/Sakamichi/static/js/453.8ab44547.chunk.js",
     "index.html": "/Sakamichi/index.html",
-    "main.4f31d33f.css.map": "/Sakamichi/static/css/main.4f31d33f.css.map",
-    "main.6672db8e.js.map": "/Sakamichi/static/js/main.6672db8e.js.map",
+    "main.cbabd4ce.css.map": "/Sakamichi/static/css/main.cbabd4ce.css.map",
+    "main.a690df80.js.map": "/Sakamichi/static/js/main.a690df80.js.map",
     "453.8ab44547.chunk.js.map": "/Sakamichi/static/js/453.8ab44547.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.4f31d33f.css",
-    "static/js/main.6672db8e.js"
+    "static/css/main.cbabd4ce.css",
+    "static/js/main.a690df80.js"
   ]
 }
