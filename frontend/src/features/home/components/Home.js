@@ -6,10 +6,12 @@ import './Home.css'; // 新しいCSSファイルをインポート
 
 const CSV_COMBINED_PATH = "/Sakamichi/data/sakamichi_combined.csv";
 const CSV_LINK_PATH = "/Sakamichi/data/sakamichi_link.csv";
+const GROUP_CSV_FILE_PATH = "/Sakamichi/data/sakamichi_group.csv"; // グループCSVパスを追加
 
 const Home = () => {
   const [allMembers, setAllMembers] = useState([]);
   const [links, setLinks] = useState([]);
+  const [groupData, setGroupData] = useState([]); // groupDataのstateを追加
   const [birthdayMembersToday, setBirthdayMembersToday] = useState([]);
   const [birthdayMembersThisMonth, setBirthdayMembersThisMonth] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,9 +29,15 @@ const Home = () => {
         const linkResponse = await fetch(CSV_LINK_PATH);
         const linkText = await linkResponse.text();
         const linkResult = Papa.parse(linkText, { header: true, skipEmptyLines: true });
+
+        // グループ情報を読み込む
+        const groupResponse = await fetch(GROUP_CSV_FILE_PATH);
+        const groupText = await groupResponse.text();
+        const groupResult = Papa.parse(groupText, { header: true, skipEmptyLines: true });
         
         setAllMembers(parsedMembers);
         setLinks(linkResult.data);
+        setGroupData(groupResult.data); // groupDataをstateにセット
         setLoading(false);
       } catch (error) {
         console.error("CSVファイルの読み込み中にエラーが発生しました:", error);
@@ -52,7 +60,7 @@ const Home = () => {
 
     allMembers.forEach(member => {
       const birthDate = new Date(member.生年月日);
-      if (isNaN(birthDate.getTime())) return; // 無効な日付をスキップ
+      if (isNaN(birthDate.getTime())) return;
 
       const memberMonth = birthDate.getMonth();
       const memberDay = birthDate.getDate();
@@ -66,7 +74,6 @@ const Home = () => {
       }
     });
 
-    // 誕生日が近い順にソート (月が同じなら日が早い順)
     thisMonthBirthdays.sort((a, b) => {
       const dateA = new Date(a.生年月日);
       const dateB = new Date(b.生年月日);
@@ -104,6 +111,7 @@ const Home = () => {
                   member={member} 
                   groupName={member.グループ名} 
                   links={links} 
+                  groupData={groupData} // groupDataを渡す
                   isBirthdayToday={true} // 本日誕生日のフラグを渡す
                 />
               ))}
@@ -121,7 +129,8 @@ const Home = () => {
                   key={member.名前 + index} 
                   member={member} 
                   groupName={member.グループ名} 
-                  links={links} 
+                  links={links}
+                  groupData={groupData} // groupDataを渡す
                 />
               ))}
             </ul>

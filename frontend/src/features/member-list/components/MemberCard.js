@@ -27,8 +27,8 @@ const calculateAge = (birthDate) => {
   return age;
 };
 
-// isBirthdayToday プロパティを追加
-const MemberCard = ({ member, groupName, links, isBirthdayToday = false }) => {
+// isBirthdayToday と groupData プロパティを追加
+const MemberCard = ({ member, groupName: initialGroupName, links, isBirthdayToday = false, groupData }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const joinPeriod = member.加入期?.match(/\d+/)?.[0] || "1";
   const age = calculateAge(member.生年月日);
@@ -36,25 +36,45 @@ const MemberCard = ({ member, groupName, links, isBirthdayToday = false }) => {
   const profileLink = memberLinks.プロフィール;
   const officialLink = memberLinks.公式HP;
 
-  // グループ名の最初の文字を取得（例: 乃、櫻、日）
-  const shortGroupName = groupName.charAt(0);
-  // 加入期と組み合わせた表示文字列
+  // グループ名置換ロジック
+  let displayGroupName = initialGroupName; // 表示用グループ名の初期値は元のグループ名
+  const today = new Date(); // 現在の日付
+  const gradDateStr = member['卒業・辞退・契約終了日'] ? member['卒業・辞退・契約終了日'].trim() : '-';
+  // 卒業日がハイフンの場合は現在の日付、それ以外は日付形式に変換
+  const gradDate = gradDateStr === '-' ? today : new Date(gradDateStr);
+
+  // groupData が存在し、内容がある場合にのみ置換処理を行う
+  if (groupData && groupData.length > 0) {
+    const matchingGroup = groupData.find(group => group['グループ名'] === initialGroupName);
+
+    if (matchingGroup) {
+      const groupStartDate = new Date(matchingGroup['開始日']);
+      const groupEndDate = new Date(matchingGroup['終了日']);
+
+      // メンバーの卒業日（または現役なら現在日）が旧グループ名の活動期間内にある場合
+      // RubiksCube.jsx と同様のロジックを適用
+      if (gradDate >= groupStartDate && gradDate <= groupEndDate) {
+        displayGroupName = matchingGroup['旧グループ名']; // 旧グループ名に置換
+      }
+    }
+  }
+
+  // 置換されたグループ名を使用して最初の文字と色を決定
+  const shortGroupName = displayGroupName.charAt(0);
   const displayJoinPeriod = `${shortGroupName}-${joinPeriod}`;
 
   return (
     <li
-      className={`member-card ${isBirthdayToday ? 'birthday-today' : ''}`} // クラスを追加
+      className={`member-card ${isBirthdayToday ? 'birthday-today' : ''}`}
       style={{
-        // インラインスタイルはCSSクラスに移行し、必要なものだけ残す
         backgroundColor: "#fff",
         boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
         transition: "transform 0.2s",
         cursor: "pointer",
         display: "flex",
         flexDirection: "column",
-        // isBirthdayToday のスタイルは Home.css で定義
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.03)")} // 少し控えめなホバー効果
+      onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
       onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
       onClick={() => setIsExpanded(!isExpanded)}
     >
@@ -63,13 +83,13 @@ const MemberCard = ({ member, groupName, links, isBirthdayToday = false }) => {
           display: "flex",
           flexWrap: "wrap",
           alignItems: "center",
-          gap: "10px", // アイテム間の隙間
+          gap: "10px",
           width: "100%",
         }}
       >
         <span
           style={{
-            backgroundColor: groupColors[groupName],
+            backgroundColor: groupColors[displayGroupName], // 置換されたグループ名で色を決定
             color: "white",
             padding: "5px 10px",
             borderRadius: "5px",
@@ -80,14 +100,13 @@ const MemberCard = ({ member, groupName, links, isBirthdayToday = false }) => {
           {displayJoinPeriod}
         </span>
 
-        {/* 名前とよみをまとめる新しいdiv */}
         <div style={{
           display: "flex",
-          flexDirection: "column", // 縦に並べる
-          flexShrink: 1, // スペースが足りない時に縮む
-          minWidth: "80px", // 最低限の幅
+          flexDirection: "column",
+          flexShrink: 1,
+          minWidth: "80px",
         }}>
-          <div style={{ fontSize: "0.7em", color: "#666", lineHeight: "1.0em" }}>{member.よみ}</div> {/* よみを名前の真上に追加 */}
+          <div style={{ fontSize: "0.7em", color: "#666", lineHeight: "1.0em" }}>{member.よみ}</div>
           <strong>{member.名前}</strong>
         </div>
 
@@ -105,7 +124,7 @@ const MemberCard = ({ member, groupName, links, isBirthdayToday = false }) => {
         </div>
       </div>
 
-      {isExpanded && ( // クリックされた場合に表示される情報
+      {isExpanded && (
         <>
           <div style={{ display: "flex", gap: "10px", marginTop: "5px" }}>
             {profileLink && (
