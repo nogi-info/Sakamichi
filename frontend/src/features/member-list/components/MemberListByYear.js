@@ -103,7 +103,8 @@ const MemberListByYear = () => {
   const sortedAndFilteredAllMembers = useMemo(() => {
     let filteredMembers = allMembers.filter((member) => {
       const groupName = member.グループ名?.trim();
-      if (!groupName || !filters[groupName]) return false; // グループ名がない、またはフィルターがない場合は除外
+      // filters[groupName] が undefined の場合でも安全にアクセスできるように修正
+      if (!groupName || !filters[groupName]) return false;
 
       const joinPeriod = member.加入期?.match(/\d+/)?.[0] || "1";
       const isActive =
@@ -111,8 +112,12 @@ const MemberListByYear = () => {
         new Date(member["卒業・辞退・契約終了日"]) > new Date();
 
       return (
-        filters[groupName][joinPeriod] &&
-        ((filters[groupName].active && isActive) || (filters[groupName].graduated && !isActive))
+        // filters[groupName]?.[joinPeriod] が undefined の場合でも false を返すように修正
+        (filters[groupName]?.[joinPeriod] ?? false) &&
+        (
+          ((filters[groupName]?.active ?? false) && isActive) || 
+          ((filters[groupName]?.graduated ?? false) && !isActive)
+        )
       );
     });
 
@@ -202,9 +207,11 @@ const MemberListByYear = () => {
                 <input
                   type="checkbox"
                   checked={
-                    filters[group]?.active &&
-                    filters[group]?.graduated &&
-                    joinPeriods[group]?.every((period) => filters[group]?.[period])
+                    // filters[group] が undefined の場合でも安全にアクセスできるように修正
+                    (filters[group]?.active ?? false) &&
+                    (filters[group]?.graduated ?? false) &&
+                    // joinPeriods[group] が undefined の場合でも安全にアクセスできるように修正
+                    (joinPeriods[group] || []).every((period) => (filters[group]?.[period] ?? false))
                   }
                   onChange={(e) => {
                     const isChecked = e.target.checked;
@@ -213,7 +220,8 @@ const MemberListByYear = () => {
                       [group]: {
                         active: isChecked,
                         graduated: isChecked,
-                        ...Object.fromEntries(joinPeriods[group]?.map((period) => [period, isChecked])),
+                        // joinPeriods[group] が undefined の場合でも安全にアクセスできるように修正
+                        ...Object.fromEntries((joinPeriods[group] || []).map((period) => [period, isChecked])),
                       },
                     }));
                   }}
@@ -226,9 +234,10 @@ const MemberListByYear = () => {
                     outline: "none",
                     cursor: "pointer",
                     backgroundColor:
-                      filters[group]?.active &&
-                      filters[group]?.graduated &&
-                      joinPeriods[group]?.every((period) => filters[group]?.[period])
+                      // filters[group] が undefined の場合でも安全にアクセスできるように修正
+                      (filters[group]?.active ?? false) &&
+                      (filters[group]?.graduated ?? false) &&
+                      (joinPeriods[group] || []).every((period) => (filters[group]?.[period] ?? false))
                         ? groupColors[group]
                         : "#fff",
                   }}
@@ -242,7 +251,8 @@ const MemberListByYear = () => {
               <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                 <input
                   type="checkbox"
-                  checked={filters[group]?.active}
+                  // filters[group]?.active が undefined の場合でも false を返すように修正
+                  checked={filters[group]?.active ?? false}
                   onChange={() => toggleFilter(group, "active")}
                 />
                 現役メンバー
@@ -250,7 +260,8 @@ const MemberListByYear = () => {
               <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                 <input
                   type="checkbox"
-                  checked={filters[group]?.graduated}
+                  // filters[group]?.graduated が undefined の場合でも false を返すように修正
+                  checked={filters[group]?.graduated ?? false}
                   onChange={() => toggleFilter(group, "graduated")}
                 />
                 元メンバー
@@ -261,7 +272,8 @@ const MemberListByYear = () => {
             <div>
               <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>加入期:</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                {joinPeriods[group]?.map((period) => (
+                {/* joinPeriods[group] が undefined の場合でも安全に map を呼び出せるように修正 */}
+                {(joinPeriods[group] || []).map((period) => (
                   <label
                     key={period}
                     style={{
@@ -277,7 +289,8 @@ const MemberListByYear = () => {
                   >
                     <input
                       type="checkbox"
-                      checked={filters[group]?.[period]}
+                      // filters[group]?.[period] が undefined の場合でも false を返すように修正
+                      checked={filters[group]?.[period] ?? false}
                       onChange={() => toggleFilter(group, period)}
                     />
                     {period}期生
@@ -295,14 +308,19 @@ const MemberListByYear = () => {
           .filter((year) => {
             const hasMembers = membersByYear[year].some((member) => {
               const groupName = member.グループ名?.trim();
-              if (!groupName) return false;
+              // filters[groupName] が undefined の場合でも安全にアクセスできるように修正
+              if (!groupName || !filters[groupName]) return false;
               const joinPeriod = member.加入期?.match(/\d+/)?.[0] || "1";
               const isActive =
                 member["卒業・辞退・契約終了日"] === "-" ||
                 new Date(member["卒業・辞退・契約終了日"]) > new Date();
               return (
-                filters[groupName]?.[joinPeriod] &&
-                ((filters[groupName]?.active && isActive) || (filters[groupName]?.graduated && !isActive))
+                // filters[groupName]?.[joinPeriod] が undefined の場合でも false を返すように修正
+                (filters[groupName]?.[joinPeriod] ?? false) &&
+                (
+                  ((filters[groupName]?.active ?? false) && isActive) || 
+                  ((filters[groupName]?.graduated ?? false) && !isActive)
+                )
               );
             });
             return hasMembers;
@@ -314,9 +332,10 @@ const MemberListByYear = () => {
                 {year}年度生まれ
               </h2>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <GroupList members={membersByYear[year]} groupName="乃木坂46" filters={filters["乃木坂46"]} links={links} />
-                <GroupList members={membersByYear[year]} groupName="櫻坂46" filters={filters["櫻坂46"]} links={links} />
-                <GroupList members={membersByYear[year]} groupName="日向坂46" filters={filters["日向坂46"]} links={links} />
+                {/* filters["乃木坂46"] が undefined の場合でも安全に渡せるように修正 */}
+                <GroupList members={membersByYear[year]} groupName="乃木坂46" filters={filters["乃木坂46"] || {}} links={links} />
+                <GroupList members={membersByYear[year]} groupName="櫻坂46" filters={filters["櫻坂46"] || {}} links={links} />
+                <GroupList members={membersByYear[year]} groupName="日向坂46" filters={filters["日向坂46"] || {}} links={links} />
               </div>
             </div>
           ))
