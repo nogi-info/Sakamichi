@@ -1,3 +1,4 @@
+/* 既存のApp.cssの内容 */
 .App {
   text-align: center;
 }
@@ -34,5 +35,162 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* --- 提案2: ハンバーガーメニューの導入と微調整部分 --- */
+
+/* ナビゲーションバーの基本スタイル（ハンバーガーメニュー用） */
+.nav-bar-hamburger {
+  display: flex;
+  justify-content: center; /* デスクトップでは中央寄せ */
+  align-items: center;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 12px 0;
+  margin: 0 auto;
+  max-width: 700px;
+  position: relative; /* z-indexを有効にするために必要 */
+  min-height: 48px; /* タッチターゲットの推奨サイズ */
+  z-index: 9999; /* 非常に大きな値に設定して、ほぼ確実に最前面に来るようにする */
+}
+
+/* デスクトップ用のナビゲーションリンク */
+.nav-links {
+  display: flex;
+  gap: 32px;
+  list-style: none; /* リストのスタイルを削除 */
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  justify-content: center;
+}
+
+/* ナビゲーション項目のスタイル（ハンバーガーメニュー用） */
+.nav-item-hamburger {
+  position: relative;
+  font-weight: normal;
+  font-size: 1.15rem;
+  color: #333;
+  text-decoration: none;
+  padding: 6px 12px;
+  transition: color 0.2s;
+  white-space: nowrap; /* テキストの改行を防ぐ */
+}
+
+/* アクティブなナビゲーション項目のスタイル（ハンバーガーメニュー用） */
+.nav-item-hamburger.active {
+  font-weight: bold;
+  color: #812990;
+}
+
+/* ナビゲーション項目の下線スタイル（ハンバーガーメニュー用） */
+.nav-item-underline-hamburger {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: transparent;
+  width: 100%;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transition: background 0.2s;
+}
+
+/* アクティブなナビゲーション項目の下線スタイル（ハンバーガーメニュー用） */
+.nav-item-hamburger.active .nav-item-underline-hamburger {
+  background: #812990;
+}
+
+/* ナビゲーションヘッダーのスタイル */
+.app-header-custom {
+  padding: 24px 0;
+  background: #f7f6fa;
+  margin-bottom: 32px;
+}
+
+/* ハンバーガーアイコンのスタイル */
+.hamburger-icon {
+  display: none; /* デスクトップでは非表示 */
+  cursor: pointer;
+  position: absolute;
+  right: 15px; /* 右端からの距離を調整 */
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10000; /* 最も手前に来るように、メニュー本体よりも高くする */
+  padding: 5px; /* クリックしやすいようにパディングを追加 */
+}
+
+.hamburger-icon .bar {
+  width: 25px;
+  height: 3px;
+  background-color: #333;
+  margin: 5px 0;
+  transition: 0.4s;
+}
+
+/* ハンバーガーアイコンのアニメーション */
+.hamburger-icon .bar.open:nth-child(1) {
+  transform: translateY(8px) rotate(45deg);
+}
+.hamburger-icon .bar.open:nth-child(2) {
+  opacity: 0;
+}
+.hamburger-icon .bar.open:nth-child(3) {
+  transform: translateY(-8px) rotate(-45deg);
+}
+
+/* モバイル用スタイル（メディアクエリ） */
+@media (max-width: 768px) {
+  .nav-bar-hamburger {
+    justify-content: space-between; /* ロゴなどを左、アイコンを右に配置 */
+    padding: 12px 15px; /* 左右のパディングをアイコンの right 値に合わせて調整 */
+    max-width: 100%; /* 全幅を使用するように変更 */
+    z-index: 9999; /* モバイルでも最前面を維持 */
+  }
+
+  .nav-links {
+    display: none; /* 初期状態では非表示 */
+    flex-direction: column; /* 縦並びにする */
+    position: absolute;
+    top: 100%; /* ナビゲーションバーの下に配置 */
+    left: 0;
+    width: 100%;
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-radius: 0 0 12px 12px;
+    padding: 10px 0;
+    z-index: 9998; /* 親より少し低くても大丈夫ですが、確実を期すなら9999でも可 */
+  }
+
+  .nav-links.open {
+    display: flex; /* メニューが開いているときに表示 */
+  }
+
+  .nav-links li {
+    text-align: center;
+    padding: 10px 0;
+  }
+
+  .nav-item-hamburger {
+    font-size: 1.1rem;
+    padding: 10px 0;
+    display: block; /* リンク全体をクリック可能に */
+  }
+
+  .hamburger-icon {
+    display: block; /* モバイルで表示 */
+    right: 15px; /* モバイルでのアイコンの位置を調整 */
+  }
+}
+
+/* さらに小さい画面（例: スマートフォン）の場合 */
+@media (max-width: 480px) {
+  .nav-bar-hamburger {
+    padding: 10px 10px; /* さらにパディングを狭める */
+  }
+  .hamburger-icon {
+    right: 10px; /* さらにアイコンの位置を調整 */
   }
 }
