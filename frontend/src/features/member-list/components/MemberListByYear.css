@@ -7,7 +7,32 @@
   gap: 20px; /* カード間のスペース */
   flex-wrap: wrap; /* 折り返しを許可 */
   margin-bottom: 30px; /* フィルターの下にスペースを追加 */
+  /* position: relative; は注記が子要素としてフロー内に配置されるため不要ですが、残しておいても問題ありません */
 }
+
+/* 注記のスタイル */
+.filter-note {
+  /* position: absolute; top: -40px; left: 50%; transform: translateX(-50%); を削除 */
+  width: 100%; /* 親コンテナの幅全体を使用 */
+  /* max-width: 600px; を削除し、常に100%幅を確保 */
+  text-align: center;
+  font-size: 0.9em;
+  color: #666;
+  background-color: #f8f8f8; /* 控えめな背景色 */
+  padding: 8px 15px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* 控えめな影 */
+  line-height: 1.4;
+  box-sizing: border-box;
+  margin-top: 10px; /* フィルターカードとの間に少しマージンを追加 */
+  flex-basis: 100%; /* Flexアイテムとして、常に新しい行に配置されるようにする */
+  order: 999; /* 他のFlexアイテムよりも常に最後に配置されるようにする */
+}
+
+.filter-note p {
+  margin: 0; /* pタグのデフォルトマージンを削除 */
+}
+
 
 /* 各グループのフィルターカード */
 .group-filter-card {
@@ -202,5 +227,19 @@
   .display-mode-buttons button {
     padding: 8px 18px;
     font-size: 14px;
+  }
+  .filter-note {
+    font-size: 0.85em;
+    padding: 6px 10px;
+    margin-top: 15px; /* モバイルでのマージン調整 */
+  }
+}
+@media (max-width: 480px) {
+  .group-filter-card {
+    width: 100%; /* さらに小さい画面では全幅 */
+  }
+  .filter-note {
+    font-size: 0.8em;
+    margin-top: 15px; /* さらに小さい画面でのマージン調整 */
   }
 }

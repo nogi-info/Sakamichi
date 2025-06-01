@@ -162,6 +162,12 @@ const MemberListByYear = () => {
 
       {/* フィルターコントロールコンテナ */}
       <div className="filter-controls-container">
+        {/* 注記の追加 */}
+        <div className="filter-note">
+          <p>※ 欅坂46メンバーは櫻坂46として表示されます。</p>
+          <p>※ けやき坂46メンバーは日向坂46として表示されます。</p>
+        </div>
+
         {Object.keys(groupColors).map((group) => (
           <div
             key={group}
