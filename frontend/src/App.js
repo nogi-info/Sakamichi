@@ -1,4 +1,4 @@
-import React, { useState } from "react"; // useStateをインポート
+import React, { useState } from "react";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import MemberListByYear from "./features/member-list/components/MemberListByYear";
@@ -23,7 +23,7 @@ const NavBar = () => {
   };
 
   return (
-    <nav className="nav-bar-hamburger"> {/* 提案1と区別するためクラス名変更 */}
+    <nav className="nav-bar-hamburger">
       {/* ハンバーガーアイコン（モバイル版のみ表示） */}
       <div className="hamburger-icon" onClick={toggleMenu}>
         <div className={`bar ${isOpen ? 'open' : ''}`}></div>
@@ -37,11 +37,11 @@ const NavBar = () => {
           <li key={item.to}>
             <Link
               to={item.to}
-              className={`nav-item-hamburger ${location.pathname === item.to ? "active" : ""}`} // 提案1と区別するためクラス名変更
+              className={`nav-item-hamburger ${location.pathname === item.to ? "active" : ""}`}
               onClick={() => setIsOpen(false)} // メニュー項目クリックでメニューを閉じる
             >
               {item.label}
-              <span className="nav-item-underline-hamburger" /> {/* 提案1と区別するためクラス名変更 */}
+              <span className="nav-item-underline-hamburger" />
             </Link>
           </li>
         ))}
@@ -52,8 +52,8 @@ const NavBar = () => {
 
 function App() {
   return (
-    <BrowserRouter>
-      <header className="app-header-custom"> {/* 提案1と同じヘッダークラス */}
+    <BrowserRouter basename="/Sakamichi">
+      <header className="app-header-custom">
         <NavBar />
       </header>
       <Routes>
