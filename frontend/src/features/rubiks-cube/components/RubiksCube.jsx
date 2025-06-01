@@ -16,7 +16,8 @@ import { useCameraControls } from "../hooks/useCameraControls";
 import { useStopwatch } from "../hooks/useStopwatch";
 
 // スタイル
-import buttonStyle from "../../../styles/buttonStyle";
+// import buttonStyle from "../../../styles/buttonStyle"; // インラインスタイルからCSSクラスに移行するため不要になります
+import './RubiksCube.css'; // 新しいCSSファイルをインポート
 
 // CSVファイルへのパス
 const CSV_FILE_PATH = "/Sakamichi/data/sakamichi_combined.csv";
@@ -184,12 +185,12 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
   );
 
   const handleGameStart = async () => {
-    resetCube();
-    resetStopwatch();
-    setGameStarted(true);
-    await loadAndSetRandomFaceKanji();
-    await randomRotate();
-    startStopwatch();
+    resetCube(); // キューブの状態をリセット
+    resetStopwatch(); // ストップウォッチをリセット
+    setGameStarted(true); // ゲーム開始状態に設定
+    await loadAndSetRandomFaceKanji(); // ランダムな漢字を設定
+    await randomRotate(); // キューブをシャッフル
+    startStopwatch(); // ストップウォッチを開始
   };
 
   const handleRetry = () => {
@@ -204,54 +205,10 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
 
   return (
     <div
-      style={{ width: '100%', height: '800px', background: '#f0f0f0', position: 'relative' }}
+      className="rubiks-cube-container" // コンテナにクラスを適用
       onContextMenu={e => e.preventDefault()}
       onPointerUp={handlePointerUp}
     >
-      {/* ズームコントロール (コメントアウト) */}
-      {/*
-      {showZoomControls && (
-        <div style={{
-          position: "absolute",
-          top: 150,
-          left: 10,
-          zIndex: 2100,
-          background: "#fff",
-          padding: "12px",
-          borderRadius: "8px",
-          boxShadow: "0 2px 8px rgba(153, 125, 125, 0.08)",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px"
-        }}>
-          <button 
-            onClick={() => adjustCameraDistance(0.5)} 
-            style={buttonStyle}
-          >
-            －
-          </button>
-          <input
-            type="range"
-            min={CAMERA_DISTANCE_MIN}
-            max={CAMERA_DISTANCE_MAX}
-            step={0.1}
-            value={CAMERA_DISTANCE_MAX - cameraDistance + CAMERA_DISTANCE_MIN}
-            onChange={e => {
-              e.target.value = CAMERA_DISTANCE_MAX - e.target.value + CAMERA_DISTANCE_MIN;
-              handleSlider(e);
-            }}
-            style={{ width: 120 }}
-          />
-          <button 
-            onClick={() => adjustCameraDistance(-0.5)} 
-            style={buttonStyle}
-          >
-            ＋
-          </button>
-        </div>
-      )}
-      */}
-
       {/* 3Dシーン */}
       <Canvas
         camera={getCameraConfig()}
@@ -290,29 +247,12 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
         <OrbitControls {...getOrbitControlsConfig()} />
       </Canvas>
 
-      {/* クリア表示 */}
+      {/* ゲームクリア表示パネル */}
       {isCleared && (
-        <div style={{
-          position: "absolute",
-          top: "20px", // ゲーム開始ボタンと同じ位置に
-          left: "50%",
-          transform: "translateX(-50%)", // 中央揃え
-          background: "rgba(255,255,255,0.95)",
-          color: "#1976d2",
-          fontWeight: "bold",
-          textAlign: "center",
-          padding: "32px 48px",
-          borderRadius: "16px",
-          zIndex: 3000,
-          boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "10px" // 間隔を狭める
-        }}>
-          <div style={{ fontSize: "2rem", whiteSpace: "nowrap" }}>クリア！</div> {/* 改行防止 */}
-          <div style={{ fontSize: "1.5rem", whiteSpace: "nowrap" }}>{formatTime(time)}</div> {/* フォーマット適用 */}
-          <button onClick={handleRetry} style={buttonStyle}>
+        <div className="game-clear-panel game-overlay-card">
+          <div className="clear-message">クリア！</div>
+          <div className="clear-time">{formatTime(time)}</div>
+          <button onClick={handleRetry} className="game-button game-button-primary">
             もう一度プレイ
           </button>
         </div>
@@ -321,52 +261,44 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
       {/* ゲーム開始用ボタン、難易度選択パネル */}
       {/* ゲーム開始前 (gameStartedがfalse) のみ表示 */}
       {!gameStarted && (
-        <div style={{
-          position: "absolute",
-          top: "20px", // 上部に配置
-          left: "50%",
-          transform: "translateX(-50%)", // 中央揃え
-          zIndex: 2200, // 他のパネルより手前に
-          background: "#fff",
-          padding: "20px",
-          borderRadius: "12px",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "15px"
-        }}>
+        <div className="game-start-panel game-overlay-card">
           {/* ゲーム開始ボタン */}
-          <button onClick={handleGameStart} style={buttonStyle}>
+          <button onClick={handleGameStart} className="game-button game-button-primary">
             ゲームスタート
           </button>
 
           {/* 難易度選択 */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+          <div className="difficulty-selection">
+            <label className="difficulty-option">
               <input
                 type="radio"
+                name="difficulty" // 同じname属性でグループ化
                 value={1}
                 checked={difficulty === 1}
                 onChange={() => setDifficulty(1)}
+                className="difficulty-radio"
               />
               Level 1 (色のみ)
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+            <label className="difficulty-option">
               <input
                 type="radio"
+                name="difficulty"
                 value={2}
                 checked={difficulty === 2}
                 onChange={() => setDifficulty(2)}
+                className="difficulty-radio"
               />
               Level 2 (文字+色)
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+            <label className="difficulty-option">
               <input
                 type="radio"
+                name="difficulty"
                 value={3}
                 checked={difficulty === 3}
                 onChange={() => setDifficulty(3)}
+                className="difficulty-radio"
               />
               Level 3 (文字のみ)
             </label>
@@ -376,69 +308,11 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
 
       {/* ゲーム実行中 (gameStartedがtrueかつisClearedがfalse) のみストップウォッチを表示 */}
       {gameStarted && !isCleared && (
-        <div style={{
-          position: "absolute",
-          top: "20px", // 上部に配置
-          left: "50%",
-          transform: "translateX(-50%)", // 中央揃え
-          zIndex: 2200,
-          background: "#fff",
-          padding: "12px",
-          borderRadius: "8px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "10px"
-        }}>
-          <div style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
-            タイム: {formatTime(time)} {/* フォーマット適用 */}
-          </div>
+        <div className="game-time-display game-overlay-card">
+          <div className="time-label">タイム: </div>
+          <div className="current-time">{formatTime(time)}</div>
         </div>
       )}
-
-      {/* 左上に配置していたコントロールパネルは全てコメントアウト */}
-      {/*
-      <div style={{
-        position: "absolute",
-        top: 150,
-        left: 10,
-        zIndex: 2100,
-        background: "#fff",
-        padding: "12px",
-        borderRadius: "8px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "10px"
-      }}>
-        <button
-          style={{
-            ...buttonStyle,
-            background: lockPolar ? "#1976d2" : "#aaa",
-            color: "#fff"
-          }}
-          onClick={togglePolarLock}
-        >
-          {lockPolar ? "回転軸固定" : "回転自由"}
-        </button>
-
-        <button
-          style={buttonStyle}
-          onClick={toggleZoomControls}
-        >
-          {showZoomControls ? "ズーム非表示" : "ズーム表示"}
-        </button>
-
-        <button
-          style={buttonStyle}
-          onClick={() => rotateEntireCube("z", true)}
-        >
-          Z軸全体90度回転
-        </button>
-      </div>
-      */}
 
       {/* デバッグパネル */}
       <DebugPanel

@@ -88,7 +88,7 @@ export function useCubeState(faceKanji = "乃木櫻日向坂", difficulty, stopS
   /**
    * ランダム回転処理
    */
-  const randomRotate = useCallback(async (count = 12, delay = 200) => {
+  const randomRotate = useCallback(async (count = 1, delay = 200) => {
     // 現在の状態を初期状態として保存
     setInitialCubelets(cubelets);
     setInitialFaceTextures(faceTextures);

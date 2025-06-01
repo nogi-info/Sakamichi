@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import GroupList from "./MemberList";
 import MemberCard from "./MemberCard";
 import Layout from "../../../styles/Layout";
+import './MemberListByYear.css'; // 新しいCSSファイルをインポート
 
 const groupColors = {
   "乃木坂46": "#812990",
@@ -143,74 +144,39 @@ const MemberListByYear = () => {
 
   return (
     <Layout>
-      <h1 style={{ textAlign: "center", color: "#333" }}>坂道メンバー 生年月日順</h1>
-
       {/* 表示方法切り替えボタン */}
-      <div style={{ textAlign: "center", marginBottom: "20px" }}>
+      <div className="display-mode-buttons">
         <button
           onClick={() => setDisplayMode("multi-column")}
-          style={{
-            padding: "10px 20px",
-            margin: "0 10px",
-            backgroundColor: displayMode === "multi-column" ? "#007bff" : "#f0f0f0",
-            color: displayMode === "multi-column" ? "white" : "#333",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-            fontSize: "16px",
-            fontWeight: "bold",
-          }}
+          className={displayMode === "multi-column" ? "active" : ""}
         >
           グループ別表示
         </button>
         <button
           onClick={() => setDisplayMode("single-column")}
-          style={{
-            padding: "10px 20px",
-            margin: "0 10px",
-            backgroundColor: displayMode === "single-column" ? "#007bff" : "#f0f0f0",
-            color: displayMode === "single-column" ? "white" : "#333",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-            fontSize: "16px",
-            fontWeight: "bold",
-          }}
+          className={displayMode === "single-column" ? "active" : ""}
         >
-          全メンバー一括表示
+          全グループ一括表示
         </button>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "center", gap: "20px", flexWrap: "wrap" }}>
+      {/* フィルターコントロールコンテナ */}
+      <div className="filter-controls-container">
         {Object.keys(groupColors).map((group) => (
           <div
             key={group}
-            style={{
-              backgroundColor: "#fff",
-              padding: "15px",
-              borderRadius: "10px",
-              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-              marginBottom: "20px",
-              width: "300px",
-            }}
+            className="group-filter-card"
+            style={{ '--group-color': groupColors[group] }} // CSS変数としてグループカラーを渡す
           >
             {/* グループ全体のチェックボックス */}
-            <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  cursor: "pointer",
-                }}
-              >
+            <div className="group-filter-header">
+              <label>
                 <input
                   type="checkbox"
+                  className="custom-checkbox" // カスタムチェックボックス用のクラス
                   checked={
-                    // filters[group] が undefined の場合でも安全にアクセスできるように修正
                     (filters[group]?.active ?? false) &&
                     (filters[group]?.graduated ?? false) &&
-                    // joinPeriods[group] が undefined の場合でも安全にアクセスできるように修正
                     (joinPeriods[group] || []).every((period) => (filters[group]?.[period] ?? false))
                   }
                   onChange={(e) => {
@@ -220,47 +186,30 @@ const MemberListByYear = () => {
                       [group]: {
                         active: isChecked,
                         graduated: isChecked,
-                        // joinPeriods[group] が undefined の場合でも安全にアクセスできるように修正
                         ...Object.fromEntries((joinPeriods[group] || []).map((period) => [period, isChecked])),
                       },
                     }));
                   }}
-                  style={{
-                    appearance: "none",
-                    width: "20px",
-                    height: "20px",
-                    border: "2px solid #ccc",
-                    borderRadius: "50%",
-                    outline: "none",
-                    cursor: "pointer",
-                    backgroundColor:
-                      // filters[group] が undefined の場合でも安全にアクセスできるように修正
-                      (filters[group]?.active ?? false) &&
-                      (filters[group]?.graduated ?? false) &&
-                      (joinPeriods[group] || []).every((period) => (filters[group]?.[period] ?? false))
-                        ? groupColors[group]
-                        : "#fff",
-                  }}
                 />
-                <h3 style={{ color: groupColors[group], margin: 0 }}>{group}</h3>
+                <h3 style={{ color: groupColors[group] }}>{group}</h3>
               </label>
             </div>
 
             {/* 現役メンバー・元メンバーのフィルター */}
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+            <div className="status-filter-section">
+              <label>
                 <input
                   type="checkbox"
-                  // filters[group]?.active が undefined の場合でも false を返すように修正
+                  className="custom-checkbox" // カスタムチェックボックス用のクラス
                   checked={filters[group]?.active ?? false}
                   onChange={() => toggleFilter(group, "active")}
                 />
                 現役メンバー
               </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <label>
                 <input
                   type="checkbox"
-                  // filters[group]?.graduated が undefined の場合でも false を返すように修正
+                  className="custom-checkbox" // カスタムチェックボックス用のクラス
                   checked={filters[group]?.graduated ?? false}
                   onChange={() => toggleFilter(group, "graduated")}
                 />
@@ -269,27 +218,14 @@ const MemberListByYear = () => {
             </div>
 
             {/* 加入期フィルター */}
-            <div>
-              <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>加入期:</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                {/* joinPeriods[group] が undefined の場合でも安全に map を呼び出せるように修正 */}
+            <div className="period-filter-section">
+              <label>加入期:</label>
+              <div className="period-checkbox-group">
                 {(joinPeriods[group] || []).map((period) => (
-                  <label
-                    key={period}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "5px",
-                      backgroundColor: "#f9f9f9",
-                      padding: "5px 10px",
-                      borderRadius: "5px",
-                      border: "1px solid #ccc",
-                      cursor: "pointer",
-                    }}
-                  >
+                  <label key={period}>
                     <input
                       type="checkbox"
-                      // filters[group]?.[period] が undefined の場合でも false を返すように修正
+                      className="custom-checkbox" // カスタムチェックボックス用のクラス
                       checked={filters[group]?.[period] ?? false}
                       onChange={() => toggleFilter(group, period)}
                     />
@@ -308,14 +244,12 @@ const MemberListByYear = () => {
           .filter((year) => {
             const hasMembers = membersByYear[year].some((member) => {
               const groupName = member.グループ名?.trim();
-              // filters[groupName] が undefined の場合でも安全にアクセスできるように修正
               if (!groupName || !filters[groupName]) return false;
               const joinPeriod = member.加入期?.match(/\d+/)?.[0] || "1";
               const isActive =
                 member["卒業・辞退・契約終了日"] === "-" ||
                 new Date(member["卒業・辞退・契約終了日"]) > new Date();
               return (
-                // filters[groupName]?.[joinPeriod] が undefined の場合でも false を返すように修正
                 (filters[groupName]?.[joinPeriod] ?? false) &&
                 (
                   ((filters[groupName]?.active ?? false) && isActive) || 
@@ -332,7 +266,6 @@ const MemberListByYear = () => {
                 {year}年度生まれ
               </h2>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                {/* filters["乃木坂46"] が undefined の場合でも安全に渡せるように修正 */}
                 <GroupList members={membersByYear[year]} groupName="乃木坂46" filters={filters["乃木坂46"] || {}} links={links} />
                 <GroupList members={membersByYear[year]} groupName="櫻坂46" filters={filters["櫻坂46"] || {}} links={links} />
                 <GroupList members={membersByYear[year]} groupName="日向坂46" filters={filters["日向坂46"] || {}} links={links} />

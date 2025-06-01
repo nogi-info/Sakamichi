@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Papa from "papaparse";
-import Layout from "../../../styles/Layout"; // Layoutコンポーネントのパス
-import './MemberTransition.css'; // 新しいCSSファイルをインポート
+import Layout from "../../../styles/Layout";
+import './MemberTransition.css'; // CSSファイルをインポート
 
 const csvBase = "/Sakamichi/data/";
 
@@ -238,8 +238,6 @@ const MemberTransition = () => {
 
   return (
     <Layout>
-      <h1 style={{ color: "#812990", marginBottom: "16px", textAlign: "center" }}>メンバー構成の遷移</h1>
-      
       {/* メインコンテンツコンテナ：年表とメンバー構成を横並びにするFlexbox */}
       <div className="member-transition-main-container">
 
@@ -370,7 +368,9 @@ const MemberTransition = () => {
         {/* メンバー構成ブロック */}
         <div className="member-composition-section">
           <div
+            className="member-composition-card"
             style={{
+              // インラインスタイルをCSSクラスに移行し、必要なものだけ残す
               background: "#fff",
               borderRadius: "12px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
@@ -381,23 +381,28 @@ const MemberTransition = () => {
               maxWidth: "800px",
               overflow: "hidden",
               pointerEvents: "auto",
+              maxHeight: "70vh", // 50vh から 70vh に変更
+              overflowY: "auto", // コンテンツが maxHeight を超えた場合にスクロール可能にする
             }}
-            className="member-composition-card"
           >
-            <div style={{ color: "#812990", fontWeight: "bold", fontSize: "1.2em" }}>
-              {currentEvent.date.toLocaleDateString()}
+            {/* 日付と年表の内容の表示部分を新しい構造とクラスで囲む */}
+            <div className="member-composition-header" style={{ '--group-color': groupColors[currentEvent.group] || "#812990" }}>
+              <div className="member-composition-date">
+                {currentEvent.date.toLocaleDateString()}
+              </div>
+              <div className="member-composition-label">
+                {currentEvent.label}
+              </div>
             </div>
-            <div style={{ marginTop: 8, marginBottom: 12, fontWeight: "bold" }}>
-              {currentEvent.label}
-            </div>
+
             <div style={{
               display: "flex",
               gap: "16px",
               justifyContent: "center",
               flexWrap: "wrap",
               overflowX: "hidden",
-              maxHeight: "50vh",
-              overflowY: "auto",
+              // maxHeight: "50vh", // 不要または親の max-height に合わせる
+              // overflowY: "auto", // 親の overflowY で対応
             }}>
               {displayGroups.map((group) =>
                 Object.keys(activeByGroupAndPeriod[group] || {}).length ? (

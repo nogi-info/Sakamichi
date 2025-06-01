@@ -1,0 +1,206 @@
+/* MemberListByYear.css */
+
+/* フィルターコントロールのメインコンテナ */
+.filter-controls-container {
+  display: flex;
+  justify-content: center; /* 中央寄せ */
+  gap: 20px; /* カード間のスペース */
+  flex-wrap: wrap; /* 折り返しを許可 */
+  margin-bottom: 30px; /* フィルターの下にスペースを追加 */
+}
+
+/* 各グループのフィルターカード */
+.group-filter-card {
+  background-color: #fff; /* 背景色 */
+  padding: 15px; /* 内側のパディング */
+  border-radius: 10px; /* 角を丸く */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* 柔らかい影 */
+  margin-bottom: 20px; /* カードの下にスペース */
+  width: 300px; /* 固定幅 */
+  border: 1px solid #eee; /* 目立たない境界線 */
+  box-sizing: border-box; /* パディングとボーダーをwidthに含める */
+}
+
+/* グループタイトルと全体チェックボックスのヘッダー */
+.group-filter-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px; /* 下にスペース */
+  border-bottom: 1px solid #f0f0f0; /* 区切り線 */
+  padding-bottom: 10px; /* 区切り線とのパディング */
+}
+
+.group-filter-header label {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* チェックボックスとテキストの間のスペース */
+  cursor: pointer;
+  flex-grow: 1; /* ラベルが利用可能なスペースを占めるように */
+}
+
+.group-filter-header h3 {
+  margin: 0; /* デフォルトのマージンを削除 */
+  font-size: 1.2em; /* グループ名を少し大きく */
+}
+
+/* カスタムチェックボックスの基本スタイル */
+.custom-checkbox {
+  appearance: none; /* デフォルトのチェックボックススタイルを無効化 */
+  width: 22px; /* 少し大きめに */
+  height: 22px; /* 少し大きめに */
+  border: 2px solid #ccc; /* 境界線 */
+  border-radius: 4px; /* 角を丸く */
+  outline: none; /* フォーカス時のアウトラインを削除 */
+  cursor: pointer;
+  display: inline-block;
+  position: relative;
+  transition: background-color 0.2s, border-color 0.2s; /* スムーズなトランジション */
+  flex-shrink: 0; /* 縮まないように */
+}
+
+/* チェックされたカスタムチェックボックスのスタイル */
+.custom-checkbox:checked {
+  background-color: var(--group-color, #007bff); /* CSS変数でグループカラーを適用 */
+  border-color: var(--group-color, #007bff);
+}
+
+/* チェックマークの表示 */
+.custom-checkbox:checked::after {
+  content: '✔'; /* チェックマークアイコン */
+  color: white; /* チェックマークの色 */
+  font-size: 14px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* 中央に配置 */
+}
+
+/* 現役・元メンバーフィルターセクション */
+.status-filter-section {
+  display: flex;
+  justify-content: space-around; /* アイテムを均等に配置 */
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0; /* 区切り線 */
+}
+
+.status-filter-section label {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* チェックボックスとテキストの間のスペース */
+  cursor: pointer;
+  font-size: 0.95em;
+}
+
+/* 加入期フィルターセクション */
+.period-filter-section {
+  margin-top: 15px;
+}
+
+.period-filter-section > label {
+  display: block;
+  margin-bottom: 10px; /* ラベルの下にスペース */
+  font-weight: bold;
+  color: #555;
+  font-size: 1em;
+}
+
+/* 加入期チェックボックスのグループ */
+.period-checkbox-group {
+  display: flex;
+  flex-wrap: wrap; /* 折り返しを許可 */
+  gap: 8px; /* チェックボックス間のスペース */
+  justify-content: flex-start; /* 左寄せ */
+}
+
+.period-checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #f9f9f9; /* 背景色 */
+  padding: 6px 12px; /* パディング */
+  border-radius: 20px; /* ピル型に */
+  border: 1px solid #ddd; /* 境界線 */
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  font-size: 0.9em;
+}
+
+.period-checkbox-group label:hover {
+  background-color: #f0f0f0;
+  border-color: #ccc;
+}
+
+/* 加入期チェックボックスのスタイル */
+.period-checkbox-group input[type="checkbox"] {
+  appearance: none;
+  width: 18px; /* 小さめのチェックボックス */
+  height: 18px;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  display: inline-block;
+  position: relative;
+  transition: background-color 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.period-checkbox-group input[type="checkbox"]:checked {
+  background-color: var(--group-color, #007bff);
+  border-color: var(--group-color, #007bff);
+}
+
+.period-checkbox-group input[type="checkbox"]:checked::after {
+  content: '✔';
+  color: white;
+  font-size: 12px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* 表示モード切り替えボタン */
+.display-mode-buttons {
+  text-align: center;
+  margin-bottom: 30px; /* ボタンの下にスペース */
+}
+
+.display-mode-buttons button {
+  padding: 10px 25px; /* パディング */
+  margin: 0 8px; /* ボタン間のマージン */
+  background-color: #e9ecef; /* 明るいグレー */
+  color: #495057; /* 濃い目のテキスト */
+  border: 1px solid #dee2e6; /* 境界線 */
+  border-radius: 25px; /* ピル型 */
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500; /* 中程度の太さ */
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 控えめな影 */
+}
+
+.display-mode-buttons button:hover {
+  background-color: #e2e6ea;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+}
+
+.display-mode-buttons button.active {
+  background-color: #812990; /* アクティブ時の色（乃木坂カラーを例に） */
+  color: white;
+  border-color: #812990;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 768px) {
+  .group-filter-card {
+    width: 90%; /* 小さい画面での幅調整 */
+    max-width: 350px;
+  }
+  .display-mode-buttons button {
+    padding: 8px 18px;
+    font-size: 14px;
+  }
+}

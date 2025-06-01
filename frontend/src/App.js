@@ -1,16 +1,17 @@
-import React, { useState } from "react";
-import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
-import Home from "./pages/Home";
-import MemberListByYear from "./features/member-list/components/MemberListByYear";
-import MemberTransition from "./features/member-transition/components/MemberTransition";
-import RubiksCube from "./features/rubiks-cube/components/RubiksCube";
-import './App.css'; // スタイルシートをインポート
+import React, { useState } from "react"; // useStateをインポート
+import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom"; // React Routerのコンポーネントをインポート
+import Home from "./pages/Home"; // ホームページのコンポーネントをインポート
+import MemberListByYear from "./features/member-list/components/MemberListByYear"; // 生年月日順ソートページのコンポーネントをインポート
+import MemberTransition from "./features/member-transition/components/MemberTransition"; // メンバー構成の遷移ページのコンポーネントをインポート
+import RubiksCube from "./features/rubiks-cube/components/RubiksCube"; // ルービックキューブページのコンポーネントをインポート
+import './App.css'; // アプリケーション全体のスタイルシートをインポート
 
-// ナビゲーション用コンポーネント
+// ナビゲーションバーコンポーネント
 const NavBar = () => {
-  const location = useLocation();
-  const [isOpen, setIsOpen] = useState(false); // メニューの開閉状態を管理
+  const location = useLocation(); // 現在のURLロケーションを取得
+  const [isOpen, setIsOpen] = useState(false); // モバイルメニューの開閉状態を管理
 
+  // ナビゲーションアイテムの定義
   const navItems = [
     { to: "/", label: "ホーム" },
     { to: "/members", label: "生年月日順ソート" },
@@ -18,12 +19,36 @@ const NavBar = () => {
     { to: "/cube", label: "Cube" },
   ];
 
+  // メニュー開閉トグル関数
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
 
+  // BrowserRouter の basename と一致させる
+  const basename = "/Sakamichi"; 
+  
+  // URL パスから basename を取り除き、アプリ内の相対パスを取得
+  // 例: /Sakamichi/members -> /members
+  const appPathname = location.pathname.startsWith(basename)
+    ? location.pathname.substring(basename.length)
+    : location.pathname;
+  
+  // ルートパスの場合、正規化して "/" とする
+  // 例: "" -> "/", "/Sakamichi" -> "/"
+  const normalizedAppPathname = appPathname === "" || appPathname === "/" ? "/" : appPathname;
+
+  // 現在のパスに対応するナビゲーションアイテムを見つける
+  const currentPageItem = navItems.find(item => item.to === normalizedAppPathname);
+  
+  // 見つからなければデフォルトタイトルを設定
+  const currentPageTitle = currentPageItem ? currentPageItem.label : "乃木坂情報"; 
+
   return (
     <nav className="nav-bar-hamburger">
+      {/* 画面幅が小さいときに表示される現在のページタイトル */}
+      {/* モバイルで現在のページをユーザーに伝えるための要素 */}
+      <span className="current-page-title-mobile" role="heading" aria-level="1">{currentPageTitle}</span>
+
       {/* ハンバーガーアイコン（モバイル版のみ表示） */}
       <div className="hamburger-icon" onClick={toggleMenu}>
         <div className={`bar ${isOpen ? 'open' : ''}`}></div>
@@ -37,11 +62,12 @@ const NavBar = () => {
           <li key={item.to}>
             <Link
               to={item.to}
-              className={`nav-item-hamburger ${location.pathname === item.to ? "active" : ""}`}
+              // 現在のパスがアクティブなリンクであることを示すクラスを適用
+              className={`nav-item-hamburger ${item.to === normalizedAppPathname ? "active" : ""}`}
               onClick={() => setIsOpen(false)} // メニュー項目クリックでメニューを閉じる
             >
               {item.label}
-              <span className="nav-item-underline-hamburger" />
+              <span className="nav-item-underline-hamburger" /> {/* アクティブなリンクの下線 */}
             </Link>
           </li>
         ))}
@@ -50,17 +76,21 @@ const NavBar = () => {
   );
 };
 
+// アプリケーションのメインコンポーネント
 function App() {
   return (
+    // BrowserRouterを使用してルーティングを管理
+    // basename="/Sakamichi" で、GitHub Pages のサブディレクトリパスをベースとして設定
     <BrowserRouter basename="/Sakamichi">
-      <header className="app-header-custom">
-        <NavBar />
+      <header className="app-header-custom"> {/* カスタムヘッダークラス */}
+        <NavBar /> {/* ナビゲーションバーコンポーネントを配置 */}
       </header>
+      {/* Routesでルーティングルールを定義 */}
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/members" element={<MemberListByYear />} />
-        <Route path="/transition" element={<MemberTransition />} />
-        <Route path="/cube" element={<RubiksCube />} />
+        <Route path="/" element={<Home />} /> {/* ルートパスのコンポーネント */}
+        <Route path="/members" element={<MemberListByYear />} /> {/* /membersパスのコンポーネント */}
+        <Route path="/transition" element={<MemberTransition />} /> {/* /transitionパスのコンポーネント */}
+        <Route path="/cube" element={<RubiksCube />} /> {/* /cubeパスのコンポーネント */}
       </Routes>
     </BrowserRouter>
   );

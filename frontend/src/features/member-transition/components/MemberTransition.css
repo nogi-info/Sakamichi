@@ -17,7 +17,7 @@
   width: 280px; /* デスクトップでの固定幅 */
   padding-bottom: 50vh; /* 年表の最後の項目が中央に来るように余白を追加 */
   position: sticky; /* スクロールしても年表を固定 */
-  top: 20px; /* ヘッダーの下に配置 */
+  top: 160px; /* ヘッダーの高さ + マージンを考慮して調整 */
   align-self: flex-start; /* 親のFlexアイテムとして上揃え */
 }
 
@@ -32,7 +32,7 @@
   padding-top: 20px; /* 上部に少し余白 */
   padding-bottom: 20px; /* 下部に少し余白 */
   position: sticky; /* スクロールしてもメンバー構成を固定 */
-  top: 20px; /* 年表と位置を合わせる */
+  top: 160px; /* ヘッダーの高さ + マージンを考慮して調整 */
   align-self: flex-start; /* 親のFlexアイテムとして上揃え */
   height: fit-content; /* コンテンツに合わせて高さを調整 */
   max-height: calc(100vh - 40px); /* ビューポートからはみ出さないように最大高さを設定 */
@@ -52,6 +52,27 @@
   overflow: hidden; /* コンテンツがはみ出さないように */
   pointer-events: auto; /* クリック可能にする */
 }
+
+/* メンバー構成カード内のヘッダー（日付と年表内容） */
+.member-composition-header {
+  margin-bottom: 20px; /* 下にスペースを追加 */
+  padding-bottom: 15px; /* 下線とのパディング */
+  border-bottom: 2px solid #f0f0f0; /* 控えめな下線 */
+}
+
+.member-composition-date {
+  color: var(--group-color); /* グループカラーを適用 */
+  font-weight: bold;
+  font-size: 1.4em; /* 少し大きめに */
+  margin-bottom: 5px; /* 日付とラベルの間のスペース */
+}
+
+.member-composition-label {
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #555; /* 落ち着いた色 */
+}
+
 
 /* 画面幅が狭い場合のメディアクエリ */
 @media (max-width: 900px) { /* 900px以下でレイアウトを切り替え */

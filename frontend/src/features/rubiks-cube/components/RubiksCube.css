@@ -1,0 +1,266 @@
+/* RubiksCube.css */
+
+/* ルービックキューブコンテナの基本スタイル */
+.rubiks-cube-container {
+  width: 100%;
+  height: 800px; /* 必要に応じて調整 */
+  background: #f0f0f0;
+  position: relative; /* オーバーレイパネルの基準 */
+  display: flex; /* Canvasを中央に寄せるため */
+  justify-content: center;
+  align-items: center;
+}
+
+/* オーバーレイパネルの共通スタイル */
+.game-overlay-card {
+  /* top, left, transform は個別のパネルで上書きされる場合があるため、ここでは汎用的な中央配置を定義 */
+  position: absolute;
+  /* top: 50%; /* 垂直方向中央 */ /* 個別のパネルで上書きされるためコメントアウト */
+  left: 50%; /* 水平方向中央 */
+  transform: translate(-50%, -50%); /* 自身のサイズに基づいて正確に中央揃え */
+  z-index: 3000; /* 他の要素より手前に表示 */
+  background: rgba(255, 255, 255, 0.9); /* 白を90%透過させて背景になじませる */
+  padding: 30px 40px; /* 内側のパディング */
+  border-radius: 12px; /* 角を丸く */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); /* 柔らかい影 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px; /* 要素間のスペース */
+  text-align: center;
+}
+
+/* ゲームクリアパネル固有のスタイル */
+.game-clear-panel {
+  /* ストップウォッチの表示と同じ位置に調整 */
+  top: 20px; /* 上部に配置 */
+  left: 50%;
+  transform: translateX(-50%); /* 水平中央揃え */
+  /* game-overlay-card の transform: translate(-50%, -50%) を上書き */
+}
+
+.clear-message {
+  font-size: 2.2rem; /* 大きな「クリア！」メッセージ */
+  font-weight: bold;
+  white-space: nowrap; /* テキストの折り返しを防ぐ */
+  color: #812990; /* 「クリア！」メッセージの色を乃木坂カラーに */
+}
+
+.clear-time {
+  font-size: 1.8rem; /* 時間表示のサイズ */
+  font-weight: bold;
+  white-space: nowrap; /* テキストの折り返しを防ぐ */
+  color: #333;
+}
+
+/* ゲーム開始パネル固有のスタイル */
+.game-start-panel {
+  /* game-overlay-card のスタイルを継承し、top/left/transform はそのまま */
+  top: 20px; /* ストップウォッチやクリアパネルと同じ位置に調整 */
+  left: 50%;
+  transform: translateX(-50%); /* 水平中央揃え */
+  /* game-overlay-card の transform: translate(-50%, -50%) を上書き */
+}
+
+/* ゲーム中の時間表示パネル */
+.game-time-display {
+  position: absolute;
+  top: 20px; /* 上部に配置 */
+  left: 50%;
+  transform: translateX(-50%); /* 水平中央揃え */
+  z-index: 2200; /* 他のパネルより手前に */
+  background: rgba(255, 255, 255, 0.9); /* 白を90%透過させて背景になじませる */
+  padding: 12px 20px; /* パディングを調整 */
+  border-radius: 8px; /* 角を丸く */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center; /* 垂直中央揃え */
+  gap: 8px; /* ラベルと時間の間のスペース */
+}
+
+.time-label {
+  font-size: 1.1rem;
+  font-weight: normal;
+  color: #555;
+}
+
+.current-time {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #333;
+}
+
+/* ゲームボタンの共通スタイル */
+.game-button {
+  padding: 12px 30px; /* パディング */
+  margin: 0; /* マージンをリセット */
+  background-color: #e9ecef; /* 明るいグレー */
+  color: #495057; /* 濃い目のテキスト */
+  border: 1px solid #dee2e6; /* 境界線 */
+  border-radius: 28px; /* ピル型 */
+  cursor: pointer;
+  font-size: 18px; /* フォントサイズ */
+  font-weight: 600; /* 太めのフォント */
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1); /* 影 */
+  min-width: 180px; /* 最小幅を設定 */
+}
+
+.game-button:hover {
+  background-color: #e2e6ea;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  transform: translateY(-1px); /* わずかに浮き上がる効果 */
+}
+
+.game-button:active {
+  background-color: #d6dbe0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transform: translateY(0); /* 押し込む効果 */
+}
+
+/* プライマリボタン（ゲームスタート、もう一度プレイ）のスタイル */
+.game-button-primary {
+  background-color: #812990; /* 乃木坂カラー */
+  color: white;
+  border-color: #812990;
+}
+
+.game-button-primary:hover {
+  background-color: #6a227a; /* ホバーで少し濃く */
+  border-color: #6a227a;
+}
+
+.game-button-primary:active {
+  background-color: #531b60; /* アクティブでさらに濃く */
+}
+
+/* 難易度選択セクション */
+.difficulty-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* オプション間のスペース */
+  margin-top: 10px;
+  width: 100%; /* 親の幅に合わせる */
+}
+
+.difficulty-option {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* ラジオボタンとテキストの間のスペース */
+  cursor: pointer;
+  font-size: 1.1em;
+  color: #555;
+  background-color: #f8f8f8; /* オプションの背景色 */
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: 1px solid #eee;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.difficulty-option:hover {
+  background-color: #f0f0f0;
+  border-color: #ddd;
+}
+
+/* カスタムラジオボタンのスタイル */
+.difficulty-radio {
+  appearance: none; /* デフォルトのラジオボタンスタイルを無効化 */
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ccc;
+  border-radius: 50%; /* 円形 */
+  outline: none;
+  cursor: pointer;
+  display: inline-block;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.difficulty-radio:checked {
+  background-color: #812990; /* チェック時の色 */
+  border-color: #812990;
+}
+
+/* チェックマークの表示 */
+.difficulty-radio:checked::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background-color: white; /* チェックマークの色 */
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+  .game-overlay-card {
+    padding: 20px 25px; /* モバイルでのパディング調整 */
+    width: 90%; /* 幅を広げる */
+    max-width: 320px; /* 最大幅を設定 */
+  }
+
+  .game-clear-panel {
+    /* モバイルでも上部に配置を維持 */
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .clear-message {
+    font-size: 1.8rem;
+  }
+
+  .clear-time {
+    font-size: 1.4rem;
+  }
+
+  .game-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    min-width: 150px;
+  }
+
+  .game-time-display {
+    padding: 10px 15px;
+    font-size: 1rem;
+  }
+
+  .time-label {
+    font-size: 1em;
+  }
+
+  .current-time {
+    font-size: 1.2em;
+  }
+
+  .difficulty-option {
+    font-size: 1em;
+    padding: 8px 12px;
+  }
+
+  .difficulty-radio {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-overlay-card {
+    padding: 15px 20px;
+    gap: 10px;
+  }
+  .clear-message {
+    font-size: 1.5rem;
+  }
+  .clear-time {
+    font-size: 1.2rem;
+  }
+  .game-button {
+    padding: 8px 15px;
+    font-size: 14px;
+    min-width: 120px;
+  }
+}
