@@ -1,9 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <meta name="theme-color" content="#000000" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>React App</title>
+    <meta name="description" content="乃木坂46、櫻坂46、日向坂46（欅坂46、けやき坂46）の現役・元メンバー情報をまとめたファンサイト。生年月日順、加入期別でメンバーを情報を表示できます。" />
+    <title>坂道グループ情報サイト</title>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VNQXRJKJYE"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-VNQXRJKJYE');
+    </script>
     <script>
       (function(){
         // sessionStorageにリダイレクト情報があるか確認
@@ -23,6 +37,7 @@
     />
   </head>
   <body>
+    <noscript>JavaScriptを有効にしてください。</noscript>
     <div id="root"></div>
   </body>
 </html>
