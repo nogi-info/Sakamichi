@@ -37,8 +37,9 @@ export function isCubeSolved(cubelets, difficulty) { // difficultyを引数に�
  */
 function isFaceSolved(cubelets, axis, value, difficulty) { // difficultyを引数に追加
   // 1. 指定した面のcubeletを抽出
-  const faceCubelets = cubelets.filter(cubelet => {
-    return cubelet.position[getAxisIndex(axis)] === value;
+  const axisIndex = getAxisIndex(axis);
+  let faceCubelets = cubelets.filter(cubelet => {
+    return cubelet.position[axisIndex] === value;
   });
 
   // 面のcubeletが9個でない場合はエラー
@@ -57,9 +58,13 @@ function isFaceSolved(cubelets, axis, value, difficulty) { // difficultyを引�
     return false;
   }
 
-  // 4. 難易度が1の場合は向きの判定をスキップしてtrueを返す
+  // 4. 難易度が1の場合はfaceCubeletsから中央のキューブを除外
   if (difficulty === 1) {
-    return true;
+    const otherAxes = [0, 1, 2].filter(i => i !== axisIndex);
+    faceCubelets = faceCubelets.filter(cubelet => {
+      // otherAxesの値が全て0でない場合は中央のキューブではない
+      return !(cubelet.position[otherAxes[0]] === 0 && cubelet.position[otherAxes[1]] === 0);
+    });
   }
 
   // 5. 向きが全て同じかチェック (difficultyが1でない場合のみ実行)
