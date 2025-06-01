@@ -17,12 +17,12 @@ code {
 
 /* ヘッダーの基本スタイル */
 .app-header-custom {
-  padding: 24px 0; /* 元のApp.cssの値に戻す */
-  background: #f7f6fa; /* 元のApp.cssの値に戻す */
-  margin-bottom: 32px; /* 元のApp.cssの値に戻す */
+  padding: 24px 0; /* ヘッダーの上下パディング */
+  background: #f7f6fa; /* ヘッダーの背景色 */
+  margin-bottom: 32px; /* ヘッダーの下のマージン */
   position: sticky; /* スクロールしてもヘッダーを固定 */
   top: 0; /* ページトップに固定 */
-  z-index: 1000; /* 他の要素より手前に表示 */
+  z-index: 99999; /* 他のコンテンツより常に最前面に表示されるように非常に高い値に設定 */
   width: 100%;
   box-sizing: border-box; /* パディングをwidthに含める */
   box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* 影 */
@@ -31,17 +31,17 @@ code {
 /* ナビゲーションバーの基本スタイル（ハンバーガーメニュー用） */
 .nav-bar-hamburger {
   display: flex; /* Flexコンテナとして要素を配置 */
-  justify-content: center; /* デスクトップでは中央寄せに戻す */
+  justify-content: center; /* デスクトップでは中央寄せ */
   align-items: center; /* 垂直方向中央揃え */
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   padding: 12px 0;
   margin: 0 auto;
-  max-width: 700px; /* 元のApp.cssの値に戻す */
+  max-width: 700px; /* ナビゲーションバーの最大幅 */
   position: relative; /* モバイルメニューの絶対配置の基準 */
   min-height: 48px; /* タッチターゲットの推奨サイズ */
-  z-index: 9999; /* 非常に大きな値に設定して、ほぼ確実に最前面に来るようにする */
+  /* z-index: 9999; <-- 親である .app-header-custom の z-index が適用されるため、ここでは不要 */
 }
 
 /* 現在のページタイトル（モバイルでのみ表示） */
@@ -61,33 +61,33 @@ code {
 .hamburger-icon {
   display: none; /* デスクトップでは非表示 */
   cursor: pointer;
-  position: absolute; /* 元のApp.cssのabsoluteに戻す */
-  right: 15px; /* 右端からの距離を調整 */
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10000; /* 最も手前に来るように、メニュー本体よりも高くする */
+  position: absolute; /* 親要素に対して絶対位置指定 */
+  right: 15px; /* 右端からの距離 */
+  top: 50%; /* 垂直中央 */
+  transform: translateY(-50%); /* 自身の高さの半分だけ上に移動して正確に中央揃え */
+  z-index: 10000; /* メニュー本体よりも手前に表示 */
   padding: 5px; /* クリックしやすいようにパディングを追加 */
 }
 
 .hamburger-icon .bar {
-  width: 25px; /* 元のApp.cssの値に戻す */
-  height: 3px;
-  background-color: #333;
-  margin: 5px 0; /* 元のApp.cssの値に戻す */
-  transition: 0.4s; /* スムーズなアニメーション */
+  width: 25px; /* バーの幅 */
+  height: 3px; /* バーの高さ */
+  background-color: #333; /* バーの色 */
+  margin: 5px 0; /* バー間のマージン */
+  transition: 0.4s; /* アニメーションの速度 */
 }
 
-/* ハンバーガーアイコンのアニメーション */
+/* ハンバーガーアイコンのアニメーション（Xに変化） */
 .hamburger-icon.open .bar:nth-child(1) {
-  transform: translateY(8px) rotate(45deg);
+  transform: translateY(8px) rotate(45deg); /* 上のバーを回転・移動 */
 }
 
 .hamburger-icon.open .bar:nth-child(2) {
-  opacity: 0;
+  opacity: 0; /* 中央のバーを非表示 */
 }
 
 .hamburger-icon.open .bar:nth-child(3) {
-  transform: translateY(-8px) rotate(-45deg);
+  transform: translateY(-8px) rotate(-45deg); /* 下のバーを回転・移動 */
 }
 
 /* ナビゲーションリンクのスタイル（デスクトップ用） */
@@ -96,19 +96,19 @@ code {
   margin: 0;
   padding: 0;
   display: flex; /* デスクトップでは横並び */
-  gap: 32px; /* 元のApp.cssの値に戻す */
-  width: 100%; /* 元のApp.cssの値に戻す */
-  justify-content: center; /* 元のApp.cssの値に戻す */
+  gap: 32px; /* メニューアイテム間のスペース */
+  width: 100%; /* 親要素の幅を使用 */
+  justify-content: center; /* 中央寄せ */
 }
 
-/* ナビゲーション項目のスタイル（ハンバーガーメニュー用） */
+/* ナビゲーション項目のスタイル */
 .nav-item-hamburger {
   position: relative;
-  font-weight: normal; /* 元のApp.cssの値に戻す */
-  font-size: 1.15rem; /* 元のApp.cssの値に戻す */
+  font-weight: normal;
+  font-size: 1.15rem;
   color: #333;
   text-decoration: none;
-  padding: 6px 12px; /* 元のApp.cssの値に戻す */
+  padding: 6px 12px;
   transition: color 0.2s;
   white-space: nowrap; /* テキストの改行を防ぐ */
 }
@@ -118,13 +118,13 @@ code {
   color: #812990;
 }
 
-/* アクティブなナビゲーション項目のスタイル（ハンバーガーメニュー用） */
+/* アクティブなナビゲーション項目のスタイル */
 .nav-item-hamburger.active {
-  font-weight: bold; /* 元のApp.cssの値に戻す */
+  font-weight: bold;
   color: #812990;
 }
 
-/* ナビゲーション項目の下線スタイル（ハンバーガーメニュー用） */
+/* ナビゲーション項目の下線スタイル */
 .nav-item-underline-hamburger {
   display: block;
   height: 3px;
@@ -137,18 +137,18 @@ code {
   transition: background 0.2s;
 }
 
-/* アクティブなナビゲーション項目の下線スタイル（ハンバーガーメニュー用） */
+/* アクティブなナビゲーション項目の下線スタイル */
 .nav-item-hamburger.active .nav-item-underline-hamburger {
   background: #812990;
 }
 
 /* モバイル用スタイル（メディアクエリ） */
-@media (max-width: 768px) { /* ブレークポイントを調整してください */
+@media (max-width: 768px) { /* 768px以下でレイアウトを切り替え */
   .nav-bar-hamburger {
     justify-content: space-between; /* タイトルとハンバーガーアイコンを左右に配置 */
-    padding: 12px 15px; /* 左右のパディングをアイコンの right 値に合わせて調整 */
-    max-width: 100%; /* 全幅を使用するように変更 */
-    z-index: 9999; /* モバイルでも最前面を維持 */
+    padding: 12px 15px; /* 左右のパディングを調整 */
+    max-width: 100%; /* 全幅を使用 */
+    /* z-index: 9999; <-- 親である .app-header-custom の z-index が適用されるため、ここでは不要 */
   }
 
   .current-page-title-mobile {
@@ -157,39 +157,41 @@ code {
   }
 
   .hamburger-icon {
-    margin-left: 0; /* デスクトップでの自動マージンを解除 */
     display: block; /* モバイルで表示 */
-    position: absolute; /* 元のApp.cssのabsoluteに戻す */
-    right: 15px; /* 元のApp.cssの値に戻す */
-    top: 50%; /* 元のApp.cssの値に戻す */
-    transform: translateY(-50%); /* 元のApp.cssの値に戻す */
-    padding: 5px; /* 元のApp.cssの値に戻す */
+    position: absolute; /* 親要素に対して絶対位置指定を維持 */
+    right: 15px; /* 右端からの距離 */
+    top: 50%; /* 垂直中央 */
+    transform: translateY(-50%); /* 自身の高さの半分だけ上に移動して正確に中央揃え */
+    padding: 5px; /* クリックしやすいようにパディングを追加 */
   }
 
   .nav-links {
-    display: none; /* 初期状態では非表示 */
-    flex-direction: column; /* 縦方向にスタック */
+    flex-direction: column; /* 縦並びにする */
     position: absolute;
-    top: 100%; /* ナビゲーションバーの下に配置 */
-    left: 0; /* 元のApp.cssの値に戻す */
-    width: 100%; /* 元のApp.cssの値に戻す */
+    top: 100%; /* ナビゲーションバーのすぐ下に配置 */
+    right: 0; /* 右端に寄せる */
+    width: 250px; /* モバイルメニューの幅 */
     background: #fff;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     border-radius: 0 0 12px 12px;
-    padding: 10px 0; /* 元のApp.cssの値に戻す */
-    z-index: 9998; /* 親より少し低くても大丈夫ですが、確実を期すなら9999でも可 */
+    padding: 15px 0; /* パディング */
+    z-index: 9998; /* 他のコンテンツより手前、ハンバーガーアイコンより奥 */
     max-height: calc(100vh - 70px); /* 画面の高さを考慮した最大高さ */
     overflow-y: auto; /* メニューアイテムが多すぎる場合にスクロール可能にする */
+    
+    /* スライドインアニメーションの初期状態 */
+    transform: translateX(100%); /* 初期状態では右に完全に隠す */
+    transition: transform 0.3s ease-out; /* スライドイン/アウトのアニメーション */
   }
 
   .nav-links.open {
-    display: flex; /* メニューが開いているときに表示 */
+    transform: translateX(0); /* メニューが開いたときにスライドイン */
   }
 
   .nav-links li {
     margin: 0;
     padding: 0 20px; /* リストアイテムの内側パディング */
-    text-align: center; /* 元のApp.cssの値に戻す */
+    text-align: center; /* テキストを中央寄せ */
   }
 
   .nav-item-hamburger {
