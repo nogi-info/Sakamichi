@@ -41,7 +41,6 @@ code {
   max-width: 700px; /* ナビゲーションバーの最大幅 */
   position: relative; /* モバイルメニューの絶対配置の基準 */
   min-height: 48px; /* タッチターゲットの推奨サイズ */
-  /* z-index: 9999; <-- 親である .app-header-custom の z-index が適用されるため、ここでは不要 */
 }
 
 /* 現在のページタイトル（モバイルでのみ表示） */
@@ -148,7 +147,6 @@ code {
     justify-content: space-between; /* タイトルとハンバーガーアイコンを左右に配置 */
     padding: 12px 15px; /* 左右のパディングを調整 */
     max-width: 100%; /* 全幅を使用 */
-    /* z-index: 9999; <-- 親である .app-header-custom の z-index が適用されるため、ここでは不要 */
   }
 
   .current-page-title-mobile {
@@ -169,8 +167,8 @@ code {
     flex-direction: column; /* 縦並びにする */
     position: absolute;
     top: 100%; /* ナビゲーションバーのすぐ下に配置 */
-    right: 0; /* 右端に寄せる */
-    width: 250px; /* モバイルメニューの幅 */
+    left: 0; /* 左端に寄せる */
+    width: 100%; /* メニューの幅を全幅にする */
     background: #fff;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     border-radius: 0 0 12px 12px;
@@ -180,18 +178,22 @@ code {
     overflow-y: auto; /* メニューアイテムが多すぎる場合にスクロール可能にする */
     
     /* スライドインアニメーションの初期状態 */
-    transform: translateX(100%); /* 初期状態では右に完全に隠す */
-    transition: transform 0.3s ease-out; /* スライドイン/アウトのアニメーション */
+    transform: translateY(-100%); /* 初期状態では上に完全に隠す */
+    visibility: hidden; /* 初期状態では完全に非表示 */
+    opacity: 0; /* 初期状態では透明 */
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out, visibility 0.3s ease-out; /* スライドイン/アウトのアニメーションとフェード */
   }
 
   .nav-links.open {
-    transform: translateX(0); /* メニューが開いたときにスライドイン */
+    transform: translateY(0); /* メニューが開いたときにスライドイン */
+    visibility: visible; /* メニューが開いたときに表示 */
+    opacity: 1; /* メニューが開いたときに不透明 */
   }
 
   .nav-links li {
     margin: 0;
     padding: 0 20px; /* リストアイテムの内側パディング */
-    text-align: center; /* テキストを中央寄せ */
+    text-align: left; /* テキストを左寄せ */
   }
 
   .nav-item-hamburger {

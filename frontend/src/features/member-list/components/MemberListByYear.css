@@ -7,14 +7,11 @@
   gap: 20px; /* カード間のスペース */
   flex-wrap: wrap; /* 折り返しを許可 */
   margin-bottom: 30px; /* フィルターの下にスペースを追加 */
-  /* position: relative; は注記が子要素としてフロー内に配置されるため不要ですが、残しておいても問題ありません */
 }
 
 /* 注記のスタイル */
 .filter-note {
-  /* position: absolute; top: -40px; left: 50%; transform: translateX(-50%); を削除 */
   width: 100%; /* 親コンテナの幅全体を使用 */
-  /* max-width: 600px; を削除し、常に100%幅を確保 */
   text-align: center;
   font-size: 0.9em;
   color: #666;
@@ -41,9 +38,18 @@
   border-radius: 10px; /* 角を丸く */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* 柔らかい影 */
   margin-bottom: 20px; /* カードの下にスペース */
-  width: 300px; /* 固定幅 */
   border: 1px solid #eee; /* 目立たない境界線 */
   box-sizing: border-box; /* パディングとボーダーをwidthに含める */
+
+  /* --- ここから修正 --- */
+  /* 固定幅を削除し、flexboxでレスポンシブに対応 */
+  flex-grow: 1; /* 利用可能なスペースを埋めるように伸びる */
+  flex-shrink: 1; /* 必要に応じて縮む */
+  /* 3列表示の基本幅 (gap 20pxを考慮: (100% - 2 * 20px) / 3) */
+  flex-basis: calc((100% - 40px) / 3); 
+  min-width: 280px; /* カードの最小幅を設定（これ以下には縮まないようにする） */
+  max-width: 350px; /* カードの最大幅を設定（これ以上は伸びないようにする） */
+  /* --- ここまで修正 --- */
 }
 
 /* グループタイトルと全体チェックボックスのヘッダー */
@@ -219,10 +225,20 @@
 }
 
 /* レスポンシブ調整 */
-@media (max-width: 768px) {
+@media (max-width: 1024px) { /* 1024px以下で2列表示に切り替え */
   .group-filter-card {
-    width: 90%; /* 小さい画面での幅調整 */
-    max-width: 350px;
+    /* 2列表示の基本幅 (gap 20pxを考慮: (100% - 20px) / 2) */
+    flex-basis: calc((100% - 20px) / 2);
+    min-width: 250px; /* 最小幅を調整 */
+    max-width: none; /* 最大幅を解除して柔軟に */
+  }
+}
+
+@media (max-width: 768px) { /* 768px以下で1列表示に切り替え */
+  .group-filter-card {
+    flex-basis: 100%; /* 1列表示 */
+    max-width: none; /* 最大幅を解除して全幅に */
+    min-width: unset; /* 最小幅も解除 */
   }
   .display-mode-buttons button {
     padding: 8px 18px;
@@ -235,9 +251,6 @@
   }
 }
 @media (max-width: 480px) {
-  .group-filter-card {
-    width: 100%; /* さらに小さい画面では全幅 */
-  }
   .filter-note {
     font-size: 0.8em;
     margin-top: 15px; /* さらに小さい画面でのマージン調整 */
