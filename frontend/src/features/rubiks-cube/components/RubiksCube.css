@@ -2,20 +2,26 @@
 
 /* ルービックキューブコンテナの基本スタイル */
 .rubiks-cube-container {
-  width: 100%;
-  height: 800px; /* 必要に応じて調整 */
+  width: 100vw; /* ビューポートの幅いっぱいに */
+  /* デスクトップ時のヘッダー高さを考慮 */
+  height: calc(100vh - var(--header-height-desktop)); 
   background: #f0f0f0;
   position: relative; /* オーバーレイパネルの基準 */
   display: flex; /* Canvasを中央に寄せるため */
   justify-content: center;
   align-items: center;
+  overflow: hidden; /* コンテナ内でのスクロールを防止 */
+}
+
+/* body がゲームアクティブな時のスタイル */
+/* このスタイルは、App.css のヘッダーや Layout の余白を打ち消すために必要 */
+body.game-active {
+  overflow: hidden; /* ルービックキューブページがアクティブな時のみスクロールを防止 */
 }
 
 /* オーバーレイパネルの共通スタイル */
 .game-overlay-card {
-  /* top, left, transform は個別のパネルで上書きされる場合があるため、ここでは汎用的な中央配置を定義 */
   position: absolute;
-  /* top: 50%; /* 垂直方向中央 */ /* 個別のパネルで上書きされるためコメントアウト */
   left: 50%; /* 水平方向中央 */
   transform: translate(-50%, -50%); /* 自身のサイズに基づいて正確に中央揃え */
   z-index: 3000; /* 他の要素より手前に表示 */
@@ -32,11 +38,9 @@
 
 /* ゲームクリアパネル固有のスタイル */
 .game-clear-panel {
-  /* ストップウォッチの表示と同じ位置に調整 */
   top: 20px; /* 上部に配置 */
   left: 50%;
   transform: translateX(-50%); /* 水平中央揃え */
-  /* game-overlay-card の transform: translate(-50%, -50%) を上書き */
 }
 
 .clear-message {
@@ -55,11 +59,9 @@
 
 /* ゲーム開始パネル固有のスタイル */
 .game-start-panel {
-  /* game-overlay-card のスタイルを継承し、top/left/transform はそのまま */
   top: 20px; /* ストップウォッチやクリアパネルと同じ位置に調整 */
   left: 50%;
   transform: translateX(-50%); /* 水平中央揃え */
-  /* game-overlay-card の transform: translate(-50%, -50%) を上書き */
 }
 
 /* ゲーム中の時間表示パネル */
@@ -196,6 +198,12 @@
 
 /* レスポンシブデザイン */
 @media (max-width: 768px) {
+  .rubiks-cube-container {
+    /* モバイル時のヘッダー高さを考慮 */
+    height: calc(100vh - var(--header-height-mobile)); 
+    width: 100vw; /* モバイルでもビューポートの幅いっぱいに */
+  }
+
   .game-overlay-card {
     padding: 20px 25px; /* モバイルでのパディング調整 */
     width: 90%; /* 幅を広げる */
@@ -203,8 +211,7 @@
   }
 
   .game-clear-panel {
-    /* モバイルでも上部に配置を維持 */
-    top: 20px;
+    top: 20px; /* モバイルでも上部に配置を維持 */
     left: 50%;
     transform: translateX(-50%);
   }

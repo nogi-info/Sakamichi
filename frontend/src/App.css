@@ -1,7 +1,15 @@
 /* App.css */
 
+:root {
+  /* ヘッダーの高さの正確な計算値 */
+  /* .app-header-custom (padding: 24px 0) + .nav-bar-hamburger (min-height: 48px, padding: 12px 0) + .app-header-custom (margin-bottom: 32px) */
+  /* = (24px + 24px) + (48px + 12px + 12px) + 32px = 48px + 72px + 32px = 152px */
+  --header-height-desktop: 152px; 
+  --header-height-mobile: 152px; /* モバイルも同じ高さと仮定 */
+}
+
 /* 全体的なリセットや共通スタイル */
-body {
+body { /* htmlの高さを100%にするのは、bodyが100%になるため不要。overflow: hiddenも削除 */
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',

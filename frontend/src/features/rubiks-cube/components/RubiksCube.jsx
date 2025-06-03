@@ -16,8 +16,7 @@ import { useCameraControls } from "../hooks/useCameraControls";
 import { useStopwatch } from "../hooks/useStopwatch";
 
 // スタイル
-// import buttonStyle from "../../../styles/buttonStyle"; // インラインスタイルからCSSクラスに移行するため不要になります
-import './RubiksCube.css'; // 新しいCSSファイルをインポート
+import './RubiksCube.css';
 
 // CSVファイルへのパス
 const CSV_FILE_PATH = "/Sakamichi/data/sakamichi_combined.csv";
