@@ -201,7 +201,7 @@ code {
   .nav-links li {
     margin: 0;
     padding: 0 20px; /* リストアイテムの内側パディング */
-    text-align: left; /* テキストを左寄せ */
+    text-align: center; /* テキストを中央寄せに修正 */
   }
 
   .nav-item-hamburger {
@@ -211,7 +211,7 @@ code {
   }
 
   .nav-item-underline-hamburger {
-    display: none; /* モバイルメニューでは下線は非表示 */
+    display: block; /* モバイルメニューでも下線を表示するように修正 */
   }
 }
 

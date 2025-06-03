@@ -8,6 +8,7 @@ import Cubelet from "../utils/Cubelet";
 import RotatingGroup from "../utils/RotatingGroup";
 import AxesArrows from "../utils/AxesArrows";
 import DebugPanel from "./DebugPanel";
+import MemberCard from "../../member-list/components/MemberCard"; // MemberCardをインポート
 
 // カスタムフック
 import { useCubeState } from "../hooks/useCubeState";
@@ -21,6 +22,7 @@ import './RubiksCube.css';
 // CSVファイルへのパス
 const CSV_FILE_PATH = "/Sakamichi/data/sakamichi_combined.csv";
 const GROUP_CSV_FILE_PATH = "/Sakamichi/data/sakamichi_group.csv";
+const LINKS_CSV_FILE_PATH = "/Sakamichi/data/sakamichi_link.csv"; // リンクCSVのパスを追加
 
 // 時間表示のヘルパー関数
 const formatTime = (seconds) => {
@@ -40,9 +42,12 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
   const [faceKanji, setFaceKanji] = useState(initialFaceKanji); 
   const [difficulty, setDifficulty] = useState(2); // 初期値をLevel 2に設定
   const [groupData, setGroupData] = useState([]); // グループCSVデータを保持するstate
+  const [links, setLinks] = useState([]); // リンク情報を保持するstate
+  const [selectedMember, setSelectedMember] = useState(null); // 選択されたメンバーを記憶するstate
 
-  // グループCSVデータを読み込むuseEffect
+  // グループCSVデータとリンク情報を読み込むuseEffect
   useEffect(() => {
+    // グループCSVデータを読み込む
     const loadGroupData = async () => {
       try {
         const response = await fetch(GROUP_CSV_FILE_PATH);
@@ -64,7 +69,32 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
         console.error("Error loading group data:", error);
       }
     };
+
+    // リンク情報を読み込む
+    const loadLinksData = async () => {
+      try {
+        const response = await fetch(LINKS_CSV_FILE_PATH); // 正しいパスを使用
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const csvText = await response.text();
+        Papa.parse(csvText, {
+          download: false, // fetchで取得済みなのでdownloadは不要
+          header: true,
+          complete: (result) => {
+            setLinks(result.data);
+          },
+          error: (err) => {
+            console.error("PapaParse error loading links data:", err);
+          },
+        });
+      } catch (error) {
+        console.error("Error loading links data:", error);
+      }
+    };
+
     loadGroupData();
+    loadLinksData();
   }, []); // コンポーネントマウント時に一度だけ実行
 
   const loadAndSetRandomFaceKanji = async () => {
@@ -84,6 +114,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
           if (dataRows.length === 0) {
             console.warn("CSVファイルにデータ行がありません。");
             setFaceKanji(initialFaceKanji);
+            setSelectedMember(null); // メンバーがいない場合はリセット
             return;
           }
 
@@ -110,16 +141,19 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
           const newFaceKanji = combinedString.substring(0, 6);
 
           setFaceKanji(newFaceKanji || initialFaceKanji);
+          setSelectedMember(selectedRow); // 選択されたメンバーを記憶
         },
         error: (err) => {
           console.error("PapaParseエラー:", err);
           setFaceKanji(initialFaceKanji);
+          setSelectedMember(null); // エラー時はリセット
         }
       });
 
     } catch (error) {
       console.error("CSVファイルの読み込みまたはパース中にエラーが発生しました:", error);
       setFaceKanji(initialFaceKanji);
+      setSelectedMember(null); // エラー時はリセット
     }
   };
 
@@ -187,18 +221,26 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     resetCube(); // キューブの状態をリセット
     resetStopwatch(); // ストップウォッチをリセット
     setGameStarted(true); // ゲーム開始状態に設定
-    await loadAndSetRandomFaceKanji(); // ランダムな漢字を設定
+    
+    // difficultyが1でない場合のみメンバーをランダム選択
+    if (difficulty !== 1) {
+      await loadAndSetRandomFaceKanji(); // ランダムな漢字を設定し、selectedMemberをセット
+    } else {
+      setFaceKanji(initialFaceKanji); // difficulty=1の場合は初期漢字に戻す
+      setSelectedMember(null); // メンバー情報をクリア
+    }
+
     await randomRotate(); // キューブをシャッフル
     startStopwatch(); // ストップウォッチを開始
   };
 
   const handleRetry = () => {
-    // ここでfaceKanjiを初期値に戻す
     setFaceKanji(initialFaceKanji); 
     resetCube(); // キューブの状態をリセット
     resetStopwatch(); // ストップウォッチをリセット
     setGameStarted(false); // ゲーム開始状態をfalseに戻す
     setDifficulty(2); // 難易度を初期値に戻す（任意）
+    setSelectedMember(null); // 選択されたメンバーをリセット
     // クリア表示はresetCubeでisClearedがfalseになるため自動的に消える
   };
 
@@ -251,6 +293,17 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
         <div className="game-clear-panel game-overlay-card">
           <div className="clear-message">クリア！</div>
           <div className="clear-time">{formatTime(time)}</div>
+          {selectedMember && difficulty !== 1 && ( // 選択されたメンバーが存在し、difficultyが1でない場合のみ表示
+            <div className="selected-member-info">
+              {/* MemberCard コンポーネントを直接使用 */}
+              <MemberCard 
+                member={selectedMember} 
+                groupName={selectedMember['グループ名']} // メンバーオブジェクトからグループ名を取得
+                links={links} // linksはRubiksCubeコンポーネントのstateから渡す
+                groupData={groupData} // groupDataもRubiksCubeコンポーネントのstateから渡す
+              />
+            </div>
+          )}
           <button onClick={handleRetry} className="game-button game-button-primary">
             もう一度プレイ
           </button>

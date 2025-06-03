@@ -73,6 +73,10 @@ const MemberCard = ({ member, groupName: initialGroupName, links, isBirthdayToda
         cursor: "pointer",
         display: "flex",
         flexDirection: "column",
+        padding: "15px", // MemberCardが単独で表示されるためパディングを追加
+        borderRadius: "10px", // 角を丸く
+        maxWidth: "300px", // 最大幅を設定して見やすくする
+        margin: "0 auto", // 中央寄せ
       }}
       onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
       onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
@@ -106,18 +110,19 @@ const MemberCard = ({ member, groupName: initialGroupName, links, isBirthdayToda
           flexShrink: 1,
           minWidth: "80px",
         }}>
-          <div style={{ fontSize: "0.7em", color: "#666", lineHeight: "1.0em" }}>{member.よみ}</div>
+          <div style={{ fontSize: "0.6em", color: "#666", lineHeight: "0.9em" }}>{member.よみ}</div>
           <strong>{member.名前}</strong>
         </div>
 
         <div
           style={{
-            fontSize: "1.0em",
+            fontSize: "0.9em",
             color: "#999",
             flexShrink: 1,
-            minWidth: "130px",
+            // minWidth: "130px", // 固定の最小幅を削除
             textAlign: "right",
             marginLeft: "auto",
+            whiteSpace: "nowrap", // 文字列が改行されないように設定
           }}
         >
           {member.生年月日} ({age}歳)

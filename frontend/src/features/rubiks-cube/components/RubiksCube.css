@@ -13,12 +13,6 @@
   overflow: hidden; /* コンテナ内でのスクロールを防止 */
 }
 
-/* body がゲームアクティブな時のスタイル */
-/* このスタイルは、App.css のヘッダーや Layout の余白を打ち消すために必要 */
-body.game-active {
-  overflow: hidden; /* ルービックキューブページがアクティブな時のみスクロールを防止 */
-}
-
 /* オーバーレイパネルの共通スタイル */
 .game-overlay-card {
   position: absolute;
@@ -55,6 +49,14 @@ body.game-active {
   font-weight: bold;
   white-space: nowrap; /* テキストの折り返しを防ぐ */
   color: #333;
+}
+
+/* クリアパネル内のメンバー情報表示領域 */
+.selected-member-info {
+  margin-top: 15px; /* 上部に少しスペース */
+  width: 100%; /* 親の幅に合わせる */
+  display: flex;
+  justify-content: center; /* MemberCardを中央寄せ */
 }
 
 /* ゲーム開始パネル固有のスタイル */
