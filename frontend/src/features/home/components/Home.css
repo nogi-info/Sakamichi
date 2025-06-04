@@ -77,7 +77,8 @@ html, body {
   margin: 0;
   display: grid; /* グリッドレイアウト */
   gap: 15px; /* カード間の隙間 */
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* レスポンシブなカラム */
+  /* MemberCardのmaxWidth:300pxを考慮し、それに合わせてグリッドを調整 */
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
   justify-content: center; /* 中央寄せ */
 }
 
@@ -87,6 +88,10 @@ html, body {
   padding: 15px; /* パディングを調整 */
   border-radius: 8px; /* 角を丸く */
   box-sizing: border-box;
+  /* MemberCard.jsのインラインスタイルmaxWidth:300pxを尊重しつつ、
+     グリッドセル内で適切に配置されるように調整 */
+  width: 100%; /* グリッドセル内で幅を100%に */
+  /* margin: 0 auto; はMemberCard.jsにインラインで設定されているため、ここでは不要 */
 }
 
 /* 本日誕生日のMemberCardの強調スタイル */

@@ -3,7 +3,7 @@ import MemberCard from "./MemberCard"; // MemberCardを正しくインポート�
 
 const GroupList = ({ members, groupName, filters, links }) => {
   return (
-    <ul style={{ listStyle: "none", padding: 0, flex: 1 }}>
+    <ul style={{ listStyle: "none", padding: 0, flex: 1, margin: "0 4px" }}>
       {members
         .filter((member) => {
           const joinPeriod = member.加入期?.match(/\d+/)?.[0] || "1";

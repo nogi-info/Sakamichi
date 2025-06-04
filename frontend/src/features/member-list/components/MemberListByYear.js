@@ -267,11 +267,11 @@ const MemberListByYear = () => {
           })
           .sort((a, b) => a - b)
           .map((year) => (
-            <div key={year} style={{ marginBottom: "20px" }}>
+            <div key={year} style={{ marginBottom: "20px", maxWidth:"1000px", margin: "0 auto" }}>
               <h2 style={{ borderBottom: "2px solid #ccc", paddingBottom: "5px" }}>
                 {year}年度生まれ
               </h2>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between"}}>
                 <GroupList members={membersByYear[year]} groupName="乃木坂46" filters={filters["乃木坂46"] || {}} links={links} />
                 <GroupList members={membersByYear[year]} groupName="櫻坂46" filters={filters["櫻坂46"] || {}} links={links} />
                 <GroupList members={membersByYear[year]} groupName="日向坂46" filters={filters["日向坂46"] || {}} links={links} />

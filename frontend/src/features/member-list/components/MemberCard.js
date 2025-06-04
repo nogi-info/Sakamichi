@@ -75,8 +75,8 @@ const MemberCard = ({ member, groupName: initialGroupName, links, isBirthdayToda
         flexDirection: "column",
         padding: "15px", // MemberCardが単独で表示されるためパディングを追加
         borderRadius: "10px", // 角を丸く
-        maxWidth: "300px", // 最大幅を設定して見やすくする
-        margin: "0 auto", // 中央寄せ
+        // maxWidth: "300px", // 削除
+        // margin: "0 auto", // 削除
       }}
       onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
       onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
