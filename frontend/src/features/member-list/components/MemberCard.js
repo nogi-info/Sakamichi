@@ -108,7 +108,7 @@ const MemberCard = ({ member, groupName: initialGroupName, links, isBirthdayToda
           display: "flex",
           flexDirection: "column",
           flexShrink: 1,
-          minWidth: "80px",
+          // minWidth: "80px", // 削除またはコメントアウト
         }}>
           <div style={{ fontSize: "0.6em", color: "#666", lineHeight: "0.9em" }}>{member.よみ}</div>
           <strong>{member.名前}</strong>
@@ -119,13 +119,16 @@ const MemberCard = ({ member, groupName: initialGroupName, links, isBirthdayToda
             fontSize: "0.9em",
             color: "#999",
             flexShrink: 1,
-            // minWidth: "130px", // 固定の最小幅を削除
             textAlign: "right",
             marginLeft: "auto",
-            whiteSpace: "nowrap", // 文字列が改行されないように設定
+            display: "flex", // flexコンテナにする
+            flexWrap: "wrap", // 子要素のspanが折り返せるようにする
+            justifyContent: "flex-end", // 右寄せを維持
+            gap: "0.2em", // 生年月日と年齢の間の小さな隙間
           }}
         >
-          {member.生年月日} ({age}歳)
+          <span style={{ whiteSpace: "nowrap" }}>{member.生年月日}</span>
+          <span style={{ whiteSpace: "nowrap" }}>({age}歳)</span>
         </div>
       </div>
 
