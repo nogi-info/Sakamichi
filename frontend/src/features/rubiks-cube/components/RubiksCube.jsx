@@ -3,12 +3,15 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import Papa from "papaparse";
 
+// 新しく作成したスコア管理コンポーネントをインポート
+import LeaderboardAndScoreSave from "./LeaderboardAndScoreSave";
+
 // コンポーネント
 import Cubelet from "../utils/Cubelet";
 import RotatingGroup from "../utils/RotatingGroup";
 import AxesArrows from "../utils/AxesArrows";
 import DebugPanel from "./DebugPanel";
-import MemberCard from "../../member-list/components/MemberCard"; // MemberCardをインポート
+// MemberCard は LeaderboardAndScoreSave 内で使用されるため、ここではインポート不要
 
 // カスタムフック
 import { useCubeState } from "../hooks/useCubeState";
@@ -24,28 +27,24 @@ const CSV_FILE_PATH = "/Sakamichi/data/sakamichi_combined.csv";
 const GROUP_CSV_FILE_PATH = "/Sakamichi/data/sakamichi_group.csv";
 const LINKS_CSV_FILE_PATH = "/Sakamichi/data/sakamichi_link.csv"; // リンクCSVのパスを追加
 
-// 時間表示のヘルパー関数
+// 時間表示のヘルパー関数 (LeaderboardAndScoreSave.jsx に移動済み)
 const formatTime = (totalSeconds) => {
   const minutes = Math.floor(totalSeconds / 60);
-  const remainingSeconds = totalSeconds % 60; // 小数点以下を含む秒数
+  const remainingSeconds = totalSeconds % 60;
 
-  // 秒を小数点以下2桁の文字列にフォーマット
   let formattedSecondsString = remainingSeconds.toFixed(2);
-
-  // 整数部分と小数部分を分割
   const parts = formattedSecondsString.split('.');
   const integerPart = parts[0];
-  const decimalPart = parts[1] || '00'; // 小数部分がない場合は '00'
+  const decimalPart = parts[1] || '00';
 
   if (minutes === 0) {
-    // 5秒67 の形式
     return `${integerPart}秒${decimalPart}`;
   } else {
-    // 1分05秒67 の形式
-    const paddedIntegerPart = integerPart.padStart(2, '0'); // 秒の整数部を2桁にパディング
+    const paddedIntegerPart = integerPart.padStart(2, '0');
     return `${minutes}分${paddedIntegerPart}秒${decimalPart}`;
   }
 };
+
 
 function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
   const [faceKanji, setFaceKanji] = useState(initialFaceKanji); 
@@ -185,7 +184,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     setRotationAngle,
     rotationLayer,
     setRotationLayer,
-    isCleared,
+    isCleared, // isClearedの状態を使用
     faceTextures,
     staticCubelets,
     resetCube,
@@ -195,7 +194,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     judgeCleared,
     gameStarted,
     setGameStarted,
-  } = useCubeState(faceKanji, difficulty, stopStopwatch);
+  } = useCubeState(faceKanji, difficulty, stopStopwatch); // stopStopwatchをuseCubeStateに渡す
 
   const {
     cameraDistance,
@@ -250,7 +249,6 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     setGameStarted(false); // ゲーム開始状態をfalseに戻す
     setDifficulty(2); // 難易度を初期値に戻す（任意）
     setSelectedMember(null); // 選択されたメンバーをリセット
-    // クリア表示はresetCubeでisClearedがfalseになるため自動的に消える
   };
 
   return (
@@ -297,27 +295,18 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
         <OrbitControls {...getOrbitControlsConfig()} />
       </Canvas>
 
-      {/* ゲームクリア表示パネル */}
-      {isCleared && (
-        <div className="game-clear-panel game-overlay-card">
-          <div className="clear-message">クリア！</div>
-          <div className="clear-time">{formatTime(time)}</div>
-          {selectedMember && difficulty !== 1 && ( // 選択されたメンバーが存在し、difficultyが1でない場合のみ表示
-            <div className="selected-member-info">
-              {/* MemberCard コンポーネントを直接使用 */}
-              <MemberCard 
-                member={selectedMember} 
-                groupName={selectedMember['グループ名']} // メンバーオブジェクトからグループ名を取得
-                links={links} // linksはRubiksCubeコンポーネントのstateから渡す
-                groupData={groupData} // groupDataもRubiksCubeコンポーネントのstateから渡す
-              />
-            </div>
-          )}
-          <button onClick={handleRetry} className="game-button game-button-primary">
-            もう一度プレイ
-          </button>
-        </div>
-      )}
+      {/* LeaderboardAndScoreSaveコンポーネントをレンダリング */}
+      {/* isCleared, time, difficulty, selectedMember, groupData, links をPropsとして渡す */}
+      {/* onRetryを渡して、LeaderboardAndScoreSaveからリトライをトリガーできるようにする */}
+      <LeaderboardAndScoreSave 
+        isCleared={isCleared}
+        time={time}
+        difficulty={difficulty}
+        selectedMember={selectedMember}
+        groupData={groupData}
+        links={links}
+        onRetry={handleRetry} // RubiksCubeのhandleRetry関数をLeaderboardAndScoreSaveに渡す
+      />
 
       {/* ゲーム開始用ボタン、難易度選択パネル */}
       {/* ゲーム開始前 (gameStartedがfalse) のみ表示 */}

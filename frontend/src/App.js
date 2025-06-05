@@ -1,10 +1,13 @@
-import React, { useState } from "react"; // useStateをインポート
+import React, { useState, useEffect } from "react"; // useState と useEffect をインポート
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom"; // React Routerのコンポーネントをインポート
 import Home from "./features/home/components/Home"; // ホームページのコンポーネントをインポート
 import MemberListByYear from "./features/member-list/components/MemberListByYear"; // 生年月日順ソートページのコンポーネントをインポート
 import MemberTransition from "./features/member-transition/components/MemberTransition"; // メンバー構成の遷移ページのコンポーネントをインポート
 import RubiksCube from "./features/rubiks-cube/components/RubiksCube"; // ルービックキューブページのコンポーネントをインポート
 import './App.css'; // アプリケーション全体のスタイルシートをインポート
+
+// Firebaseの初期化関数とインスタンスをインポート
+import { initializeFirebaseAndAuth } from './firebaseConfig';
 
 // ナビゲーションバーコンポーネント
 const NavBar = () => {
@@ -78,6 +81,46 @@ const NavBar = () => {
 
 // アプリケーションのメインコンポーネント
 function App() {
+  // Firebaseの初期化と認証が完了したかどうかの状態
+  const [firebaseAuthReady, setFirebaseAuthReady] = useState(false);
+  // 認証されたユーザーIDを保持（デバッグや将来的な機能拡張用）
+  const [currentUserId, setCurrentUserId] = useState(null);
+
+  // Firebaseの初期化と認証をコンポーネントマウント時に一度だけ実行
+  useEffect(() => {
+    async function initFirebase() {
+      try {
+        const { userId } = await initializeFirebaseAndAuth();
+        setCurrentUserId(userId); // 認証されたユーザーIDをstateにセット
+        setFirebaseAuthReady(true); // Firebase認証が完了したことをマーク
+      } catch (error) {
+        console.error("Firebase: Initialization failed in App.js:", error);
+        // エラーが発生した場合も、アプリケーションを続行できるようにする
+        // ただし、Firebaseに依存する機能は正しく動作しない可能性があります。
+        setFirebaseAuthReady(false); 
+      }
+    }
+    initFirebase();
+  }, []); // 空の依存配列により、コンポーネントマウント時に一度だけ実行
+
+  // Firebase認証がまだ完了していない場合はローディング表示
+  if (!firebaseAuthReady) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh', 
+        fontSize: '1.5em', 
+        color: '#812990',
+        backgroundColor: '#f8f8f8'
+      }}>
+        <p>Firebaseを読み込み中...</p>
+      </div>
+    );
+  }
+
+  // Firebase認証が完了したら、ルーターとアプリケーションコンテンツをレンダリング
   return (
     // BrowserRouterを使用してルーティングを管理
     // basename="/Sakamichi" で、GitHub Pages のサブディレクトリパスをベースとして設定
