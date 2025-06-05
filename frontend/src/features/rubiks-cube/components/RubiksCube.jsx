@@ -25,16 +25,25 @@ const GROUP_CSV_FILE_PATH = "/Sakamichi/data/sakamichi_group.csv";
 const LINKS_CSV_FILE_PATH = "/Sakamichi/data/sakamichi_link.csv"; // リンクCSVのパスを追加
 
 // 時間表示のヘルパー関数
-const formatTime = (seconds) => {
-  if (seconds < 60) {
-    // 小数点以下を表示しないように変更
-    return `${Math.floor(seconds)}秒`;
+const formatTime = (totalSeconds) => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = totalSeconds % 60; // 小数点以下を含む秒数
+
+  // 秒を小数点以下2桁の文字列にフォーマット
+  let formattedSecondsString = remainingSeconds.toFixed(2);
+
+  // 整数部分と小数部分を分割
+  const parts = formattedSecondsString.split('.');
+  const integerPart = parts[0];
+  const decimalPart = parts[1] || '00'; // 小数部分がない場合は '00'
+
+  if (minutes === 0) {
+    // 5秒67 の形式
+    return `${integerPart}秒${decimalPart}`;
   } else {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60); // 小数点以下を表示しないように変更
-    // 残り秒数を2桁表示（整数部）
-    const formattedRemainingSeconds = remainingSeconds < 10 ? `0${remainingSeconds}` : `${remainingSeconds}`;
-    return `${minutes}分${formattedRemainingSeconds}秒`;
+    // 1分05秒67 の形式
+    const paddedIntegerPart = integerPart.padStart(2, '0'); // 秒の整数部を2桁にパディング
+    return `${minutes}分${paddedIntegerPart}秒${decimalPart}`;
   }
 };
 
