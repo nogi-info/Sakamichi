@@ -28,8 +28,8 @@ const calculateAge = (birthDate) => {
 };
 
 // isBirthdayToday と groupData プロパティを追加
-const MemberCard = ({ member, groupName: initialGroupName, links, isBirthdayToday = false, groupData }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+const MemberCard = ({ member, groupName: initialGroupName, links, isBirthdayToday = false, groupData, initialExpanded = false}) => {
+  const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const joinPeriod = member.加入期?.match(/\d+/)?.[0] || "1";
   const age = calculateAge(member.生年月日);
   const memberLinks = links.find((link) => link.名前 === member.名前) || {};

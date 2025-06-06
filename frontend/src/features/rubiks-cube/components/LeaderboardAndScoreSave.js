@@ -201,13 +201,14 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
                 groupName={selectedMember['グループ名']} // メンバーオブジェクトからグループ名を取得
                 links={links} // linksはRubiksCubeコンポーネントのstateから渡す
                 groupData={groupData} // groupDataもRubiksCubeコンポーネントのstateから渡す
+                initialExpanded={true} // 初期状態で展開
               />
             </div>
           )}
 
           {/* ベストタイム表示セクション */}
           <div className="best-times-section">
-            <h3>ベストタイム (難易度 {difficulty})</h3>
+            <h3>ベストタイム (Level {difficulty})</h3>
             {leaderboardTimes.length > 0 || (isCleared && latestUserScoreAfterGame) ? ( // クリア済みで圏外スコアがある場合もリスト表示
               <ul className="best-times-list" ref={listRef}> {/* Refをul要素に設定 */}
                 {leaderboardTimes.map((score, index) => (
@@ -253,14 +254,14 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
       {/* スコア保存モーダル */}
       {showSaveScoreModal && (
         <div className="save-score-modal game-overlay-card">
-          <h3>スコアを登録</h3>
+          <h3>スコア更新！</h3>
           <p>
             タイム: <span className="score-value">{formatTime(scoreToSave?.time || 0)}</span> {' '}
-            (難易度: <span className="score-value">{scoreToSave?.difficulty}</span>)
+            (Level: <span className="score-value">{scoreToSave?.difficulty}</span>)
           </p>
           <input
             type="text"
-            placeholder="ユーザー名を入力してください"
+            placeholder="ニックネームを入力してください"
             value={inputUsername}
             onChange={(e) => setInputUsername(e.target.value)}
             maxLength={20} // 名前入力の最大長
@@ -269,7 +270,7 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
           {saveScoreMessage && <p className="save-message">{saveScoreMessage}</p>}
           <div className="modal-actions">
             <button onClick={handleSaveScore} className="game-button game-button-primary">
-              保存する
+              登録する
             </button>
             <button onClick={handleCancelSaveScore} className="game-button game-button-secondary">
               キャンセル

@@ -118,6 +118,7 @@ const Home = () => {
                   links={links} 
                   groupData={groupData} // groupDataを渡す
                   isBirthdayToday={true} // 本日誕生日のフラグを渡す
+                  initialExpanded={true} // 初期状態で展開
                 />
               ))}
             </ul>
