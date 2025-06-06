@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // useRefをインポート
 // Firebase Firestoreの関数をインポート
 import { collection, query, orderBy, limit, getDocs, addDoc, deleteDoc, doc, where, onSnapshot } from 'firebase/firestore';
 // Firebase設定ファイルからdb, appId, authインスタンスをインポート
@@ -7,7 +7,7 @@ import { db, appId, auth } from '../../../firebaseConfig'; // 相対パスを調
 // MemberCardコンポーネントをインポート（選択されたメンバー表示用）
 import MemberCard from "../../member-list/components/MemberCard"; 
 
-// 時間表示のヘルパー関数 (ここに移動)
+// 時間表示のヘルパー関数
 const formatTime = (totalSeconds) => {
   const minutes = Math.floor(totalSeconds / 60);
   const remainingSeconds = totalSeconds % 60; // 小数点以下を含む秒数
@@ -43,60 +43,91 @@ const formatTime = (totalSeconds) => {
  */
 function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, groupData, links, onRetry }) {
   // Firestore関連のState
-  const [leaderboardTimes, setLeaderboardTimes] = useState([]); // Firestoreから取得したベストタイム
+  const [leaderboardTimes, setLeaderboardTimes] = useState([]); // Firestoreから取得したベストタイム (常に上位20件)
+  const [bottomFiveTimes, setBottomFiveTimes] = useState([]); // スコアが圏外の場合に表示する下位5件
   const [showSaveScoreModal, setShowSaveScoreModal] = useState(false); // スコア保存モーダルの表示状態
   const [inputUsername, setInputUsername] = useState(''); // ユーザー名入力用
   const [scoreToSave, setScoreToSave] = useState(null); // 保存するスコア（タイムと難易度を含むオブジェクト）
   const [saveScoreMessage, setSaveScoreMessage] = useState(''); // スコア保存時のメッセージ
+  const [highlightedScoreId, setHighlightedScoreId] = useState(null); // 新しく保存されたスコアのIDを保持
+  const [latestUserScoreAfterGame, setLatestUserScoreAfterGame] = useState(null); // ユーザーが達成した最新スコア（圏外でも表示用）
 
-  // ベストタイムをFirestoreからリアルタイムで読み込むuseEffect (onSnapshotを使用)
+  const listRef = useRef(null); // ベストタイムリストのコンテナ (ul) への参照
+  const scoreRefs = useRef({}); // 個々のリストアイテム (li) への参照を保持するオブジェクト
+
+  // ベストタイム (上位20件) をFirestoreからリアルタイムで読み込むuseEffect
   useEffect(() => {
-    // dbが初期化されていない場合は処理しない
-    if (!db || !appId) {
-      console.log("Firestore database or appId not initialized yet. Skipping leaderboard fetch.");
-      return;
-    }
-
-    // 現在選択されている難易度に応じてリーダーボードをフィルタリング
-    const difficultyToFetch = difficulty; 
+    if (!db || !appId) return;
 
     const leaderboardRef = collection(db, `/artifacts/${appId}/public/data/rubiks_cube_leaderboard`);
     const q = query(
       leaderboardRef,
-      where("difficulty", "==", difficultyToFetch), // 現在の難易度でフィルタリング
-      orderBy("time", "asc"), // タイムが短い順にソート
-      orderBy("timestamp", "desc"), // 同じタイムの場合は新しい記録を優先
-      limit(20) // 上位20件のみ取得 (要件に合わせ20件に増量)
+      where("difficulty", "==", difficulty),
+      orderBy("time", "asc"),
+      orderBy("timestamp", "desc"),
+      limit(20)
     );
-
-    // onSnapshotでリアルタイムリスナーを設定
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const times = [];
-      snapshot.forEach((doc) => {
-        times.push({ id: doc.id, ...doc.data() });
-      });
+      snapshot.forEach((doc) => times.push({ id: doc.id, ...doc.data() }));
       setLeaderboardTimes(times);
     }, (error) => {
-      console.error("Error fetching leaderboard in real-time:", error);
-      // エラーハンドリング (例: ユーザーにメッセージを表示)
+      console.error("Error fetching top 20 leaderboard in real-time:", error);
     });
-
-    // コンポーネントのアンマウント時にリスナーを解除
     return () => unsubscribe();
-  }, [db, appId, difficulty]); // db, appId, difficultyが変更されたときに再購読
+  }, [db, appId, difficulty]);
 
-  // ゲームクリア時にスコア保存モーダルを表示するuseEffect
+  // ゲームクリア時にスコア保存モーダルの表示と最新スコアの保存を管理するuseEffect
   useEffect(() => {
-    if (isCleared && time > 0) { // isClearedがtrueになり、かつタイムが0より大きい場合
-      setScoreToSave({ time: time, difficulty: difficulty }); // 保存するスコアと難易度を設定
-      setShowSaveScoreModal(true); // モーダルを表示
+    if (isCleared && time > 0) { // クリア状態であり、タイムが0より大きい場合
+      setScoreToSave({ time: time, difficulty: difficulty }); // 保存するスコアを設定
       setInputUsername(''); // ユーザー名をリセット
       setSaveScoreMessage(''); // メッセージをリセット
-    } else if (!isCleared && showSaveScoreModal) {
-      // ゲームがクリア状態ではなくなった場合（例: リトライ時）はモーダルを非表示にする
-      setShowSaveScoreModal(false);
+      setHighlightedScoreId(null); // ハイライトをリセット
+
+      const currentLeaderboardLength = leaderboardTimes.length;
+      // ベスト20圏内に入るかチェック
+      const qualifiesForLeaderboard = 
+        currentLeaderboardLength < 20 || 
+        (leaderboardTimes.length > 0 && time < leaderboardTimes[currentLeaderboardLength - 1].time); 
+      
+      if (qualifiesForLeaderboard) {
+        setShowSaveScoreModal(true); // 資格があればモーダルを表示
+        setLatestUserScoreAfterGame(null); // トップ20入りなら個別表示は不要
+      } else {
+        // 圏外なのでモーダルは表示しない
+        setShowSaveScoreModal(false); 
+        // ユーザーの最新スコアを保存して、リーダーボードの下に表示できるようにする
+        setLatestUserScoreAfterGame({ 
+          time: time, 
+          difficulty: difficulty,
+          username: '', // 圏外スコアの場合、ユーザー名入力は行わないので空文字列
+          // 一時的なIDを割り当ててスクロール可能にする
+          id: 'user-latest-score-id-' + Date.now() 
+        });
+        // この一時的なIDをハイライト対象として設定
+        setHighlightedScoreId('user-latest-score-id-' + Date.now()); 
+      }
+    } else if (!isCleared) { // ゲームがクリア状態ではなくなった場合（例: リトライ時）
+      setShowSaveScoreModal(false); // モーダルを非表示
+      setScoreToSave(null); // 保存するスコアをクリア
+      setHighlightedScoreId(null); // ハイライトをリセット
+      setLatestUserScoreAfterGame(null); // ユーザーの最新スコアをクリア
     }
-  }, [isCleared, time, difficulty]); // isCleared, time, difficultyが変更されたときに実行
+  }, [isCleared, time, difficulty, leaderboardTimes]); // leaderboardTimesも依存配列に追加
+
+  // highlightedScoreIdが設定されたら、そのスコアまでスクロールするuseEffect
+  useEffect(() => {
+    if (highlightedScoreId && listRef.current) {
+      const element = scoreRefs.current[highlightedScoreId];
+      if (element) {
+        // レンダリングが完了し、要素がDOMに存在することを保証するため、setTimeoutで遅延
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100); // 100msの遅延
+      }
+    }
+  }, [highlightedScoreId]); // highlightedScoreIdが変更されたときに実行
 
   // スコアをFirestoreに保存する関数
   const handleSaveScore = async () => {
@@ -104,7 +135,6 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
       setSaveScoreMessage("ユーザー名を入力してください。");
       return;
     }
-    // dbが利用可能であり、かつauth.currentUserが存在することを確認
     if (!db || !auth.currentUser) { 
       setSaveScoreMessage("エラー: スコアを保存できません。Firebase接続を確認してください。");
       console.error("Firestore DB or authenticated user not available.");
@@ -120,16 +150,7 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
     try {
       const leaderboardRef = collection(db, `/artifacts/${appId}/public/data/rubiks_cube_leaderboard`);
       
-      // 現在の難易度で既存のベストタイムを取得
-      const q = query(
-        leaderboardRef,
-        where("difficulty", "==", scoreToSave.difficulty),
-        orderBy("time", "asc") // タイムが短い順
-      );
-      const snapshot = await getDocs(q);
-      let existingScores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      // 新しいスコアを追加
+      // 新しいスコアデータを作成
       const newScoreData = {
         username: inputUsername.trim(),
         time: scoreToSave.time,
@@ -137,45 +158,31 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
         timestamp: new Date(), // 現在時刻をFirestoreのTimestampとして保存
         userId: auth.currentUser.uid, // 匿名認証ユーザーのIDを保存（誰が記録したか）
       };
-      existingScores.push(newScoreData);
-
-      // タイムでソート
-      existingScores.sort((a, b) => {
-        if (a.time === b.time) {
-          // タイムが同じ場合は新しい記録を優先 (timestamp降順)
-          // FirestoreのTimestampオブジェクトはtoDate()でDateオブジェクトに変換可能
-          const tsA = a.timestamp && a.timestamp.toDate ? a.timestamp.toDate().getTime() : 0;
-          const tsB = b.timestamp && b.timestamp.toDate ? b.timestamp.toDate().getTime() : 0;
-          return tsB - tsA; 
-        }
-        return a.time - b.time; // タイムが短い順
-      });
-
-      // 20件を超える古いスコアを削除
-      if (existingScores.length > 20) {
-        const scoresToDelete = existingScores.slice(20); // 21番目以降のドキュメント
-        // Promise.allで複数の削除操作を並行して実行
-        await Promise.all(scoresToDelete.map(score => {
-          if (score.id) { // idが存在するドキュメントのみ削除
-            return deleteDoc(doc(db, `/artifacts/${appId}/public/data/rubiks_cube_leaderboard`, score.id));
-          }
-          return Promise.resolve(); // idがない場合は何もしない
-        }));
-      }
       
-      // 新しいスコアをFirestoreに追加 (addDocで新しいドキュメントとして保存)
-      // 注意: addDocは常に新しいドキュメントIDを生成します。
-      // ここでは「古いものを削除し、新しいものを追加」というロジックを採用しています。
-      await addDoc(leaderboardRef, newScoreData);
+      // 新しいスコアをFirestoreに追加
+      const docRef = await addDoc(leaderboardRef, newScoreData);
+      setHighlightedScoreId(docRef.id); // 新しく保存されたスコアのIDをハイライト対象として設定
 
       setSaveScoreMessage("スコアを保存しました！");
-      // setShowSaveScoreModal(false); // 保存後はモーダルを閉じる
-      // setInputUsername(''); // 入力フィールドをクリア
-      // setScoreToSave(null); // 保存済みスコアをクリア
+      setShowSaveScoreModal(false); // 保存後はモーダルを閉じる
+      setInputUsername(''); // 入力フィールドをクリア
+      setScoreToSave(null); // 保存済みスコアをクリア
+      // トップ20圏内に入ったので、個別表示の必要はない
+      setLatestUserScoreAfterGame(null); 
     } catch (error) {
       console.error("Error saving score to Firestore:", error);
       setSaveScoreMessage("スコアの保存に失敗しました。詳細: " + error.message);
     }
+  };
+
+  // スコア登録をキャンセルする関数
+  const handleCancelSaveScore = () => {
+    setShowSaveScoreModal(false); // モーダルを閉じる
+    setInputUsername(''); // 入力フィールドをクリア
+    setScoreToSave(null); // 保存済みスコアをクリア
+    setSaveScoreMessage(''); // メッセージをリセット
+    setHighlightedScoreId(null); // キャンセル時もハイライトをリセット
+    setLatestUserScoreAfterGame(null); // キャンセル時も最新スコア表示をクリア
   };
 
   return (
@@ -198,22 +205,44 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
             </div>
           )}
 
-          {/* ベストタイム表示 */}
-          {leaderboardTimes.length > 0 && (
-            <div className="best-times-section">
-              <h3>ベストタイム (難易度 {difficulty})</h3>
-              <ol className="best-times-list">
+          {/* ベストタイム表示セクション */}
+          <div className="best-times-section">
+            <h3>ベストタイム (難易度 {difficulty})</h3>
+            {leaderboardTimes.length > 0 || (isCleared && latestUserScoreAfterGame) ? ( // クリア済みで圏外スコアがある場合もリスト表示
+              <ul className="best-times-list" ref={listRef}> {/* Refをul要素に設定 */}
                 {leaderboardTimes.map((score, index) => (
-                  // FirestoreドキュメントのIDをkeyに使用 (idは既存のFirestoreドキュメントに存在)
-                  <li key={score.id || index}> 
+                  <li 
+                    key={score.id || index} 
+                    className={score.id === highlightedScoreId ? 'new-score' : ''}
+                    ref={el => scoreRefs.current[score.id] = el} // 各li要素にRefを設定
+                  > 
                     <span className="rank">{index + 1}.</span> 
-                    <span className="name">{score.username}</span> - 
+                    <span className="name">{score.username}</span>
                     <span className="time">{formatTime(score.time)}</span>
                   </li>
                 ))}
-              </ol>
-            </div>
-          )}
+                {/* ユーザーのスコアがトップ20圏外の場合に、リストの最後に「あなたの記録」として表示 */}
+                {latestUserScoreAfterGame && 
+                 highlightedScoreId === latestUserScoreAfterGame.id && (
+                  <li 
+                    key={latestUserScoreAfterGame.id} 
+                    className="new-score user-non-top20-score" // 圏外スコア用の特別なクラス
+                    ref={el => scoreRefs.current[latestUserScoreAfterGame.id] = el}
+                  >
+                    <span className="rank">-</span> {/* 順位を「-」に変更 */}
+                    <span className="name">あなたの記録</span> {/* 名前を「あなたの記録」に変更 */}
+                    <span className="time">{formatTime(latestUserScoreAfterGame.time)}</span>
+                  </li>
+                )}
+              </ul>
+            ) : (
+              // リーダーボードにまだスコアがない場合のメッセージ
+              <p className="no-score-message">
+                この難易度での記録はまだありません。
+                {/* 圏外スコアの場合のメッセージは削除されたため、条件から外す */}
+              </p>
+            )}
+          </div>
 
           <button onClick={onRetry} className="game-button game-button-primary">
             もう一度プレイ
@@ -242,7 +271,7 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
             <button onClick={handleSaveScore} className="game-button game-button-primary">
               保存する
             </button>
-            <button onClick={() => setShowSaveScoreModal(false)} className="game-button game-button-secondary">
+            <button onClick={handleCancelSaveScore} className="game-button game-button-secondary">
               キャンセル
             </button>
           </div>

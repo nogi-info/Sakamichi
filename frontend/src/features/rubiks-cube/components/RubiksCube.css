@@ -38,17 +38,18 @@
 }
 
 .clear-message {
-  font-size: 2.2rem; /* 大きな「クリア！」メッセージ */
+  font-size: 2.5rem; /* 大きな「クリア！」メッセージ - 強調のために少し大きく */
   font-weight: bold;
   white-space: nowrap; /* テキストの折り返しを防ぐ */
-  color: #812990; /* 「クリア！」メッセージの色を乃木坂カラーに */
+  color: #812990; /* 乃木坂カラーに統一 */
+  text-shadow: 2px 2px 4px rgba(129, 41, 144, 0.3); /* 乃木坂カラーの影で強調 */
 }
 
 .clear-time {
   font-size: 1.8rem; /* 時間表示のサイズ */
   font-weight: bold;
   white-space: nowrap; /* テキストの折り返しを防ぐ */
-  color: #333;
+  color: #812990; /* 乃木坂カラーに統一 */
 }
 
 /* クリアパネル内のメンバー情報表示領域 */
@@ -91,7 +92,7 @@
 .current-time {
   font-size: 1.4rem;
   font-weight: bold;
-  color: #333;
+  color: #812990; /* 乃木坂カラーに統一 */
 }
 
 /* ゲームボタンの共通スタイル */
@@ -198,6 +199,146 @@
   transform: translate(-50%, -50%);
 }
 
+/* --- スコア保存モーダル --- */
+.save-score-modal {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  width: 350px; /* 固定幅 */
+  max-width: 90%; /* 小さい画面での対応 */
+  padding: 25px;
+  background: #ffffff; /* 透過しない白に変更 */
+}
+
+.save-score-modal h3 {
+  color: #812990;
+  font-size: 1.8em;
+  margin-bottom: 10px;
+}
+
+.save-score-modal p {
+  font-size: 1.1em;
+  color: #555;
+  margin: 0;
+}
+
+.save-score-modal .score-value {
+  font-weight: bold;
+  color: #812990; /* 乃木坂カラーに統一 */
+}
+
+.username-input {
+  width: calc(100% - 20px); /* パディングを考慮 */
+  padding: 10px;
+  font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  text-align: center;
+}
+
+.username-input:focus {
+  border-color: #812990;
+  box-shadow: 0 0 0 3px rgba(129, 41, 144, 0.2);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+  justify-content: center;
+}
+
+.save-message {
+  font-size: 0.9em;
+  color: #d9534f; /* エラーメッセージの色 */
+  margin-top: 5px;
+}
+
+/* --- ベストタイムセクション (修正) --- */
+.best-times-section {
+  width: 100%;
+  text-align: left;
+  margin-top: 20px;
+  padding-top: 15px;
+  /* border-top: 1px solid #f0f0f0;  罫線を削除 */
+}
+
+.best-times-section h3 {
+  text-align: center;
+  color: #812990;
+  font-size: 1.4em;
+  margin-bottom: 15px;
+}
+
+.best-times-list {
+  list-style: none; /* デフォルトの順位番号を削除 */
+  padding: 0;
+  margin: 0;
+  max-height: 200px; /* 5行表示のための目安 (約5行 * 40px/行 + padding/margin) */
+  overflow-y: auto; /* スクロールバーを表示 */
+  border: 1px solid #eee; /* リスト全体の軽い境界線 */
+  border-radius: 8px;
+  background-color: #fdfdfd; /* リスト背景色 */
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); /* わずかな内側の影 */
+}
+
+.best-times-list li {
+  display: flex; /* Flexboxを使用して3列レイアウトを作成 */
+  align-items: baseline; /* テキストのベースラインを揃える */
+  padding: 8px 10px; /* 左右のパディングを追加 */
+  /* border-bottom: 1px dashed #eee; 罫線を削除 */
+  font-size: 1em;
+  color: #444;
+  justify-content: space-between; /* 要素間のスペースを均等に */
+  transition: background-color 0.3s ease-in-out; /* ハイライトのアニメーション用 */
+}
+
+.best-times-list li:nth-child(even) {
+  background-color: #f9f9f9; /* 偶数行に背景色を付けてストライプ表示 */
+}
+
+
+.best-times-list li:last-child {
+  border-bottom: none;
+}
+
+/* 新しく追加された記録を強調するスタイル */
+.best-times-list li.new-score {
+  background-color: rgba(129, 41, 144, 0.1); /* 乃木坂カラーの薄い背景 */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08); /* 影で少し浮き上がらせる */
+}
+
+
+.best-times-list .rank {
+  font-weight: bold;
+  color: #666;
+  flex: 0 0 35px; /* 順位の固定幅 */
+  text-align: left;
+}
+
+.best-times-list .name {
+  flex-grow: 1; /* 残りのスペースを埋める */
+  text-align: left;
+  margin: 0 10px; /* 順位とタイムとの間のマージン */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis; /* 長い名前を省略 */
+}
+
+.best-times-list .time {
+  font-weight: 600;
+  color: #812990; /* 乃木坂カラーに統一 */
+  flex: 0 0 85px; /* タイムの固定幅 */
+  text-align: right;
+}
+
+
 /* レスポンシブデザイン */
 @media (max-width: 768px) {
   .rubiks-cube-container {
@@ -253,6 +394,11 @@
   .difficulty-radio {
     width: 18px;
     height: 18px;
+  }
+
+  .difficulty-radio:checked::after {
+    width: 7px;
+    height: 7px;
   }
 }
 
