@@ -149,6 +149,34 @@ code {
   background: #812990;
 }
 
+/* --- ローディングアニメーションのスタイル --- */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f8f8f8;
+  color: #812990; /* 乃木坂カラー */
+  font-size: 1.2em;
+}
+
+.spinner {
+  border: 8px solid #f3f3f3; /* Light grey */
+  border-top: 8px solid #812990; /* Blue乃木坂カラー */
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite; /* アニメーション */
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
 /* モバイル用スタイル（メディアクエリ） */
 @media (max-width: 768px) { /* 768px以下でレイアウトを切り替え */
   .nav-bar-hamburger {

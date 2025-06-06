@@ -106,16 +106,9 @@ function App() {
   // Firebase認証がまだ完了していない場合はローディング表示
   if (!firebaseAuthReady) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh', 
-        fontSize: '1.5em', 
-        color: '#812990',
-        backgroundColor: '#f8f8f8'
-      }}>
-        <p>Firebaseを読み込み中...</p>
+      <div className="loading-container">
+        <div className="spinner"></div> {/* スピナー要素 */}
+        <p>読み込み中...</p>
       </div>
     );
   }
