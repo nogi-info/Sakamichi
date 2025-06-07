@@ -19,29 +19,21 @@ const parseDate = (str) => {
   return new Date(y, m - 1, d);
 };
 
-const MemberTransition = () => {
+// setModalOpen プロップスを受け取るように変更
+const MemberTransition = ({ setModalOpen }) => {
   const [members, setMembers] = useState([]);
   const [startDates, setStartDates] = useState([]);
   const [events, setEvents] = useState([]);
   const [groupPeriods, setGroupPeriods] = useState([]);
   const [loading, setLoading] = useState(true);
+  // currentIdxは、選択された年表の項目を保持するために残します
   const [currentIdx, setCurrentIdx] = useState(0);
   const itemRefs = useRef([]); // 年表アイテムへの参照を保持
-  const isUserScrolling = useRef(true); // ユーザーによるスクロールか、プログラムによるスクロールかを区別するフラグ
 
-  // 新しいstate: 年表の展開状態と画面幅が狭いかどうか
-  const [isTimelineExpanded, setIsTimelineExpanded] = useState(false);
-  const [isNarrowScreen, setIsNarrowScreen] = useState(false);
-
-  // 画面幅の検出
-  useEffect(() => {
-    const handleResize = () => {
-      setIsNarrowScreen(window.innerWidth <= 900); // 900pxをブレークポイントとする
-    };
-    handleResize(); // 初期値の設定
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // 新しいstate: メンバー構成モーダルの表示状態
+  const [isCompositionModalOpen, setIsCompositionModalOpen] = useState(false);
+  // 選択されたイベントの情報を保持するstate
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     let baseMembers = [];
@@ -138,50 +130,6 @@ const MemberTransition = () => {
     });
   }, []);
 
-  // スクロールで中央に近い出来事を検出するロジック (広い画面幅の場合のみ有効)
-  useEffect(() => {
-    if (events.length === 0) return;
-    const onScroll = () => {
-      // ユーザーによるスクロールかつ広い画面幅の場合のみcurrentIdxを更新
-      if (isUserScrolling.current && !isNarrowScreen) {
-        const center = window.innerHeight / 2;
-        let minDiff = Infinity;
-        let idx = 0;
-        itemRefs.current.forEach((ref, i) => {
-          if (ref) {
-            const rect = ref.getBoundingClientRect();
-            const diff = Math.abs(rect.top + rect.height / 2 - center);
-            if (diff < minDiff) {
-              minDiff = diff;
-              idx = i;
-            }
-          }
-        });
-        setCurrentIdx(idx);
-      }
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll(); // 初期ロード時にも実行
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [events, isNarrowScreen]); // isNarrowScreenを依存配列に追加
-
-  // currentIdxが変更されたときに、対応する年表アイテムをスクロールして中央に表示
-  useEffect(() => {
-    if (itemRefs.current[currentIdx]) {
-      isUserScrolling.current = false; // プログラムによるスクロールを開始
-      itemRefs.current[currentIdx].scrollIntoView({
-        behavior: 'smooth',
-        block: 'center', // 要素をビューポートの中央にスクロール
-      });
-      // スムーズスクロールが完了するのを待ってから、isUserScrollingをtrueに戻す
-      const timer = setTimeout(() => {
-        isUserScrolling.current = true;
-      }, 500); // smoothスクロールの所要時間に合わせて調整 (例: 500ms)
-      return () => clearTimeout(timer);
-    }
-  }, [currentIdx]);
-
-
   // 指定時点で現役のメンバーをグループごと・加入期ごとに抽出
   const getActiveMembersByGroupAndPeriod = (targetDate) => {
     if (!members.length || !startDates.length) return {};
@@ -230,47 +178,59 @@ const MemberTransition = () => {
     return <Layout><div>読み込み中...</div></Layout>;
   }
 
-  const currentEvent = events[currentIdx] || events[0];
+  // currentEvent は、選択されたイベント（モーダル表示用）または最初のイベントを初期値として設定
+  const currentEvent = selectedEvent || events[0];
   const activeByGroupAndPeriod = getActiveMembersByGroupAndPeriod(currentEvent.date);
 
   // 表示するグループ順
   const displayGroups = ["乃木坂46", "欅坂46", "櫻坂46", "けやき坂46", "日向坂46"];
 
+  // 年表項目がクリックされたときのハンドラー
+  const handleTimelineItemClick = (item) => {
+    setSelectedEvent(item); // 選択されたイベントをstateに保存
+    setIsCompositionModalOpen(true); // モーダルを開く
+    if (setModalOpen) {
+      setModalOpen(true); // App.jsにモーダルが開いたことを通知
+    }
+  };
+
   return (
     <Layout>
-      {/* メインコンテンツコンテナ：年表とメンバー構成を横並びにするFlexbox */}
-      <div className="member-transition-main-container">
+      {/* メインコンテンツコンテナ：年表が常に全画面表示 */}
+      <div className="member-transition-main-container timeline-full-width">
 
         {/* 年表（タイムライン）コンテナ */}
         <div className="timeline-section">
-          {/* 年表アイテムのラッパー：展開/縮小状態をCSSで制御 */}
-          <div className={`timeline-items-wrapper ${isNarrowScreen && !isTimelineExpanded ? 'collapsed' : ''}`}>
-            {isNarrowScreen && !isTimelineExpanded && events[currentIdx] ? (
-              // 狭い画面幅で縮小時は、選択された項目のみを表示
+          {/* 年表アイテムのラッパー */}
+          <div className="timeline-items-wrapper">
+            {events.map((item, i) => (
               <div
-                key={events[currentIdx].date.toISOString()}
-                ref={el => (itemRefs.current[currentIdx] = el)} // refは引き続き割り当てる
+                key={item.date.toISOString()}
+                ref={el => (itemRefs.current[i] = el)}
                 style={{
                   padding: "32px 0",
                   borderLeft: "4px solid #ccc",
                   marginLeft: 30,
                   position: "relative",
-                  background: "#f5f0fa", // 常にハイライト
+                  // 選択された項目を強調表示するスタイルは維持
+                  background: selectedEvent && selectedEvent.date.toISOString() === item.date.toISOString() ? "#f5f0fa" : "transparent",
                   transition: "background 0.2s",
                   minHeight: 56,
                   display: "flex",
                   alignItems: "center",
-                  cursor: "default", // クリック無効
+                  cursor: "pointer", // クリック可能にする
                   zIndex: 2,
                 }}
+                tabIndex={0} // キーボード操作可能にする
+                onClick={() => handleTimelineItemClick(item)} // クリックハンドラーを設定
               >
-                <div 
+                <div
                   style={{
                     minWidth: 90,
                     position: "relative",
                     left: -30,
                     background: "#fff",
-                    color: groupColors[events[currentIdx].group] || "#812990",
+                    color: groupColors[item.group] || "#812990",
                     fontWeight: "bold",
                     borderRadius: "8px",
                     padding: "4px 12px",
@@ -282,9 +242,9 @@ const MemberTransition = () => {
                     pointerEvents: "auto"
                   }}
                 >
-                  {events[currentIdx].date.toLocaleDateString()}
+                  {item.date.toLocaleDateString()}
                 </div>
-                <div 
+                <div
                   style={{
                     marginLeft: 8,
                     fontSize: "1.1em",
@@ -294,201 +254,149 @@ const MemberTransition = () => {
                     pointerEvents: "auto"
                   }}
                 >
-                  {events[currentIdx].label}
+                  {item.label}
                 </div>
               </div>
-            ) : (
-              // 広い画面幅の場合、または狭い画面幅で展開時は、すべての項目を表示
-              events.map((item, i) => (
-                <div
-                  key={item.date.toISOString()}
-                  ref={el => (itemRefs.current[i] = el)}
-                  style={{
-                    padding: "32px 0",
-                    borderLeft: "4px solid #ccc",
-                    marginLeft: 30,
-                    position: "relative",
-                    background: i === currentIdx ? "#f5f0fa" : "transparent",
-                    transition: "background 0.2s",
-                    minHeight: 56,
-                    display: "flex",
-                    alignItems: "center",
-                    cursor: i === currentIdx ? "default" : "pointer",
-                    zIndex: 2,
-                  }}
-                  tabIndex={i === 0 ? 0 : -1}
-                  onClick={() => setCurrentIdx(i)}
-                >
-                  <div
-                    style={{
-                      minWidth: 90,
-                      position: "relative",
-                      left: -30,
-                      background: "#fff",
-                      color: groupColors[item.group] || "#812990",
-                      fontWeight: "bold",
-                      borderRadius: "8px",
-                      padding: "4px 12px",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                      fontSize: "1.1em",
-                      marginRight: 12,
-                      textAlign: "right",
-                      zIndex: 2,
-                      pointerEvents: "auto"
-                    }}
-                  >
-                    {item.date.toLocaleDateString()}
-                  </div>
-                  <div 
-                    style={{
-                      marginLeft: 8,
-                      fontSize: "1.1em",
-                      flex: 1,
-                      wordBreak: "keep-all",
-                      zIndex: 1,
-                      pointerEvents: "auto"
-                    }}
-                  >
-                    {item.label}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          {isNarrowScreen && ( // 狭い画面幅の場合のみボタンを表示
-            <button 
-              onClick={() => setIsTimelineExpanded(!isTimelineExpanded)}
-              className={`timeline-toggle-button ${isTimelineExpanded ? 'expanded' : ''}`} // expandedクラスを追加
-            >
-              <span className="toggle-icon">{'>'}</span> {/* spanで囲み、クラスを適用 */}
-            </button>
-          )}
-        </div>
-
-        {/* メンバー構成ブロック */}
-        <div className="member-composition-section">
-          <div
-            className="member-composition-card"
-            style={{
-              // インラインスタイルをCSSクラスに移行し、必要なものだけ残す
-              background: "#fff",
-              borderRadius: "12px",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-              padding: "32px 40px",
-              minWidth: "320px",
-              minHeight: "120px",
-              textAlign: "center",
-              maxWidth: "800px",
-              overflow: "hidden",
-              pointerEvents: "auto",
-              maxHeight: "70vh", // 50vh から 70vh に変更
-              overflowY: "auto", // コンテンツが maxHeight を超えた場合にスクロール可能にする
-            }}
-          >
-            {/* 日付と年表の内容の表示部分を新しい構造とクラスで囲む */}
-            <div className="member-composition-header" style={{ '--group-color': groupColors[currentEvent.group] || "#812990" }}>
-              <div className="member-composition-date">
-                {currentEvent.date.toLocaleDateString()}
-              </div>
-              <div className="member-composition-label">
-                {currentEvent.label}
-              </div>
-            </div>
-
-            <div style={{
-              display: "flex",
-              gap: "16px",
-              justifyContent: "center",
-              flexWrap: "wrap",
-              overflowX: "hidden",
-              // maxHeight: "50vh", // 不要または親の max-height に合わせる
-              // overflowY: "auto", // 親の overflowY で対応
-            }}>
-              {displayGroups.map((group) =>
-                Object.keys(activeByGroupAndPeriod[group] || {}).length ? (
-                  <div key={group} style={{
-                    minWidth: 120,
-                    maxWidth: 220,
-                    background: "#faf7fd",
-                    borderRadius: "10px",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                    padding: "8px 6px",
-                    margin: "0 4px",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center"
-                  }}>
-                    <div style={{
-                      color: groupColors[group],
-                      fontWeight: "bold",
-                      fontSize: "1.05em",
-                      marginBottom: "4px"
-                    }}>
-                      {group}
-                    </div>
-                    {Object.entries(activeByGroupAndPeriod[group]).map(([period, names]) => (
-                      <div
-                        key={period}
-                        style={{
-                          border: `2px solid ${groupColors[group]}`,
-                          borderRadius: "8px",
-                          marginBottom: "8px",
-                          padding: "4px 6px",
-                          background: "#fff",
-                          width: "100%",
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center"
-                        }}
-                      >
-                        <span
-                          style={{
-                            display: "inline-block",
-                            fontWeight: "bold",
-                            color: groupColors[group],
-                            background: "#f5f5f5",
-                            borderRadius: "4px",
-                            padding: "2px 8px",
-                            marginBottom: "4px",
-                            marginRight: "8px",
-                            fontSize: "0.95em",
-                          }}
-                        >
-                          {period}
-                        </span>
-                        <div style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: "6px",
-                          marginTop: "4px",
-                          justifyContent: "center"
-                        }}>
-                          {names.map(name => (
-                            <span
-                              key={name}
-                              style={{
-                                background: groupColors[group],
-                                color: "#fff",
-                                borderRadius: "6px",
-                                padding: "2px 8px",
-                                fontSize: "0.97em",
-                                display: "inline-block",
-                                marginBottom: "2px"
-                              }}
-                            >
-                              {name}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null
-              )}
-            </div>
+            ))}
           </div>
         </div>
       </div>
+
+      {/* メンバー構成モーダル */}
+      {isCompositionModalOpen && selectedEvent && (
+        <div className="member-composition-modal-overlay">
+          <div className="member-composition-modal">
+            <button
+              className="modal-close-button"
+              onClick={() => {
+                setIsCompositionModalOpen(false); // モーダルを閉じる
+                if (setModalOpen) {
+                  setModalOpen(false); // App.jsにモーダルが閉じたことを通知
+                }
+              }}
+            >
+              &times;
+            </button>
+            <div
+              className="member-composition-card"
+              style={{
+                background: "#fff",
+                borderRadius: "12px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                padding: "32px 40px",
+                minWidth: "320px",
+                minHeight: "120px",
+                textAlign: "center",
+                maxWidth: "800px",
+                overflow: "hidden",
+                pointerEvents: "auto",
+                maxHeight: "80vh", // モーダル内のカードの高さ調整
+                overflowY: "auto",
+              }}
+            >
+              {/* 日付と年表の内容の表示部分を新しい構造とクラスで囲む */}
+              <div className="member-composition-header" style={{ '--group-color': groupColors[selectedEvent.group] || "#812990" }}>
+                <div className="member-composition-date">
+                  {selectedEvent.date.toLocaleDateString()}
+                </div>
+                <div className="member-composition-label">
+                  {selectedEvent.label}
+                </div>
+              </div>
+
+              <div style={{
+                display: "flex",
+                gap: "16px",
+                justifyContent: "center",
+                flexWrap: "wrap",
+                overflowX: "hidden",
+              }}>
+                {displayGroups.map((group) =>
+                  Object.keys(getActiveMembersByGroupAndPeriod(selectedEvent.date)[group] || {}).length ? (
+                    <div key={group} style={{
+                      minWidth: 120,
+                      maxWidth: 220,
+                      background: "#faf7fd",
+                      borderRadius: "10px",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                      padding: "8px 6px",
+                      margin: "0 4px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center"
+                    }}>
+                      <div style={{
+                        color: groupColors[group],
+                        fontWeight: "bold",
+                        fontSize: "1.05em",
+                        marginBottom: "4px"
+                      }}>
+                        {group}
+                      </div>
+                      {Object.entries(getActiveMembersByGroupAndPeriod(selectedEvent.date)[group]).map(([period, names]) => (
+                        <div
+                          key={period}
+                          style={{
+                            border: `2px solid ${groupColors[group]}`,
+                            borderRadius: "8px",
+                            marginBottom: "8px",
+                            padding: "4px 6px",
+                            background: "#fff",
+                            width: "100%",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center"
+                          }}
+                        >
+                          <span
+                            style={{
+                              display: "inline-block",
+                              fontWeight: "bold",
+                              color: groupColors[group],
+                              background: "#f5f5f5",
+                              borderRadius: "4px",
+                              padding: "2px 8px",
+                              marginBottom: "4px",
+                              marginRight: "8px",
+                              fontSize: "0.95em",
+                            }}
+                          >
+                            {period}
+                          </span>
+                          <div style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "6px",
+                            marginTop: "4px",
+                            justifyContent: "center"
+                          }}>
+                            {names.map(name => (
+                              <span
+                                key={name}
+                                style={{
+                                  background: groupColors[group],
+                                  color: "#fff",
+                                  borderRadius: "6px",
+                                  padding: "2px 8px",
+                                  fontSize: "0.97em",
+                                  display: "inline-block",
+                                  marginBottom: "2px"
+                                }}
+                              >
+                                {name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

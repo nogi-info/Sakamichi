@@ -4,7 +4,7 @@
   /* ヘッダーの高さの正確な計算値 */
   /* .app-header-custom (padding: 24px 0) + .nav-bar-hamburger (min-height: 48px, padding: 12px 0) + .app-header-custom (margin-bottom: 32px) */
   /* = (24px + 24px) + (48px + 12px + 12px) + 32px = 48px + 72px + 32px = 152px */
-  --header-height-desktop: 152px; 
+  --header-height-desktop: 152px;
   --header-height-mobile: 152px; /* モバイルも同じ高さと仮定 */
 }
 
@@ -34,6 +34,17 @@ code {
   width: 100%;
   box-sizing: border-box; /* パディングをwidthに含める */
   box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* 影 */
+  /* ヘッダーの表示/非表示を滑らかにするためのトランジション */
+  transition: opacity 0.3s ease, visibility 0.3s ease, height 0.3s ease, margin-bottom 0.3s ease;
+}
+
+/* モーダルが開いているときにヘッダー全体を非表示にするスタイル */
+.app-header-custom.hide-header {
+  opacity: 0;
+  visibility: hidden;
+  height: 0; /* 高さを0にして空間を占有させない */
+  margin-bottom: 0; /* 下のマージンも0にする */
+  pointer-events: none; /* 非表示時にクリックイベントも無効にする */
 }
 
 /* ナビゲーションバーの基本スタイル（ハンバーガーメニュー用） */
@@ -49,7 +60,9 @@ code {
   max-width: 700px; /* ナビゲーションバーの最大幅 */
   position: relative; /* モバイルメニューの絶対配置の基準 */
   min-height: 48px; /* タッチターゲットの推奨サイズ */
+  /* hide-nav クラスは app-header-custom で制御するため削除 */
 }
+
 
 /* 現在のページタイトル（モバイルでのみ表示） */
 .current-page-title-mobile {
@@ -212,7 +225,7 @@ code {
     z-index: 9998; /* 他のコンテンツより手前、ハンバーガーアイコンより奥 */
     max-height: calc(100vh - 70px); /* 画面の高さを考慮した最大高さ */
     overflow-y: auto; /* メニューアイテムが多すぎる場合にスクロール可能にする */
-    
+
     /* スライドインアニメーションの初期状態 */
     transform: translateY(-100%); /* 初期状態では上に完全に隠す */
     visibility: hidden; /* 初期状態では完全に非表示 */

@@ -14,6 +14,7 @@ import './App.css'; // アプリケーション全体のスタイルシートを
 const RubiksCube = lazy(() => import("./features/rubiks-cube/components/RubiksCube"));
 
 // ナビゲーションバーコンポーネント
+// isModalOpen プロップスはヘッダー全体で制御するため、NavBarからは削除します
 const NavBar = () => {
   const location = useLocation(); // 現在のURLロケーションを取得
   const [isOpen, setIsOpen] = useState(false); // モバイルメニューの開閉状態を管理
@@ -32,25 +33,26 @@ const NavBar = () => {
   };
 
   // BrowserRouter の basename と一致させる
-  const basename = "/Sakamichi"; 
-  
+  const basename = "/Sakamichi";
+
   // URL パスから basename を取り除き、アプリ内の相対パスを取得
   // 例: /Sakamichi/members -> /members
   const appPathname = location.pathname.startsWith(basename)
     ? location.pathname.substring(basename.length)
     : location.pathname;
-  
+
   // ルートパスの場合、正規化して "/" とする
   // 例: "" -> "/", "/Sakamichi" -> "/"
   const normalizedAppPathname = appPathname === "" || appPathname === "/" ? "/" : appPathname;
 
   // 現在のパスに対応するナビゲーションアイテムを見つける
   const currentPageItem = navItems.find(item => item.to === normalizedAppPathname);
-  
+
   // 見つからなければデフォルトタイトルを設定
-  const currentPageTitle = currentPageItem ? currentPageItem.label : "乃木坂情報"; 
+  const currentPageTitle = currentPageItem ? currentPageItem.label : "乃木坂情報";
 
   return (
+    // isModalOpen に基づくクラスはヘッダー全体で制御されるため、ここからは削除
     <nav className="nav-bar-hamburger">
       {/* 画面幅が小さいときに表示される現在のページタイトル */}
       {/* モバイルで現在のページをユーザーに伝えるための要素 */}
@@ -85,6 +87,9 @@ const NavBar = () => {
 
 // アプリケーションのメインコンポーネント
 function App() {
+  // モーダルが開いているかどうかを管理する新しいstate
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   // Firebaseの初期化と認証に関連するstateはここから削除します。
   // const [firebaseAuthReady, setFirebaseAuthReady] = useState(false);
   // const [currentUserId, setCurrentUserId] = useState(null);
@@ -97,7 +102,7 @@ function App() {
   //       setFirebaseAuthReady(true);
   //     } catch (error) {
   //       console.error("Firebase: Initialization failed in App.js:", error);
-  //       setFirebaseAuthReady(false); 
+  //       setFirebaseAuthReady(false);
   //     }
   //   }
   //   initFirebase();
@@ -120,16 +125,19 @@ function App() {
     // BrowserRouterを使用してルーティングを管理
     // basename="/Sakamichi" で、GitHub Pages のサブディレクトリパスをベースとして設定
     <BrowserRouter basename="/Sakamichi">
-      <header className="app-header-custom"> {/* カスタムヘッダークラス */}
+      {/* ヘッダー全体にisModalOpenの状態を元にしたクラスを適用 */}
+      <header className={`app-header-custom ${isModalOpen ? 'hide-header' : ''}`}> {/* カスタムヘッダークラス */}
+        {/* NavBarにはisModalOpenの状態を渡す必要がなくなったため削除 */}
         <NavBar /> {/* ナビゲーションバーコンポーネントを配置 */}
       </header>
       {/* Routesでルーティングルールを定義 */}
       <Routes>
         <Route path="/" element={<Home />} /> {/* ルートパスのコンポーネント */}
         <Route path="/members" element={<MemberListByYear />} /> {/* /membersパスのコンポーネント */}
-        <Route path="/transition" element={<MemberTransition />} /> {/* /transitionパスのコンポーネント */}
-        <Route 
-          path="/cube" 
+        {/* MemberTransitionにsetIsModalOpen関数を渡す */}
+        <Route path="/transition" element={<MemberTransition setModalOpen={setIsModalOpen} />} /> {/* /transitionパスのコンポーネント */}
+        <Route
+          path="/cube"
           element={
             // RubiksCubeがロードされるまで表示されるローディングUI
             <Suspense fallback={
@@ -140,7 +148,7 @@ function App() {
             }>
               <RubiksCube />
             </Suspense>
-          } 
+          }
         />
       </Routes>
     </BrowserRouter>

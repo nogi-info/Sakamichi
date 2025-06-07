@@ -3,54 +3,126 @@
 /* メインコンテンツコンテナ */
 .member-transition-main-container {
   display: flex;
-  flex-direction: row; /* デスクトップでは横並び */
-  align-items: flex-start; /* 上揃え */
+  flex-direction: column; /* 縦並びにする */
+  align-items: center; /* 中央揃え */
   gap: 20px; /* 年表とメンバー構成の間のスペース */
   min-height: calc(100vh - 100px); /* ヘッダーなどを考慮した最小高さ */
-  justify-content: center; /* 全体的に中央寄せ */
+  justify-content: flex-start; /* 全体的に上寄せ */
   padding: 20px; /* ページ全体のパディング */
+}
+
+/* 年表が全幅表示されるための調整 */
+.member-transition-main-container.timeline-full-width {
+  width: 100%; /* 全幅を使用 */
+  max-width: 1000px; /* 最大幅を設定して、広がりすぎないように調整 */
+  margin: 0 auto; /* 中央寄せ */
 }
 
 /* 年表（タイムライン）コンテナ */
 .timeline-section {
   flex-shrink: 0; /* 縮まないようにする */
-  width: 280px; /* デスクトップでの固定幅 */
-  padding-bottom: 50vh; /* 年表の最後の項目が中央に来るように余白を追加 */
-  position: sticky; /* スクロールしても年表を固定 */
-  top: 160px; /* ヘッダーの高さ + マージンを考慮して調整 */
-  align-self: flex-start; /* 親のFlexアイテムとして上揃え */
-}
-
-/* メンバー構成ブロック */
-.member-composition-section {
-  flex: 1; /* 残りのスペースを全て占める */
-  min-width: 300px; /* 最小幅を設定して、小さくなりすぎないようにする */
-  max-width: calc(100% - 300px); /* 年表の幅を考慮した最大幅 */
-  display: flex;
-  justify-content: center; /* コンテンツを水平中央寄せ */
-  align-items: flex-start; /* コンテンツを垂直上寄せ */
-  padding-top: 20px; /* 上部に少し余白 */
+  width: 100%; /* 親の幅を使用 */
   padding-bottom: 20px; /* 下部に少し余白 */
-  position: sticky; /* スクロールしてもメンバー構成を固定 */
-  top: 160px; /* ヘッダーの高さ + マージンを考慮して調整 */
-  align-self: flex-start; /* 親のFlexアイテムとして上揃え */
-  height: fit-content; /* コンテンツに合わせて高さを調整 */
-  max-height: calc(100vh - 40px); /* ビューポートからはみ出さないように最大高さを設定 */
-  overflow-y: auto; /* コンテンツが最大高さを超えた場合に内部スクロールを有効にする */
+  position: static; /* stickyを解除し、スクロール可能にする */
+  top: auto;
+  align-self: auto;
+  margin-bottom: 20px; /* 年表とモーダル（将来）の間に余白 */
+  display: flex; /* 年表項目を縦に並べるためのFlexbox */
+  flex-direction: column;
+  align-items: center; /* 中央揃え */
 }
 
-/* メンバー構成カード */
+/* 年表アイテムのラッパー */
+.timeline-items-wrapper {
+  width: 100%; /* 親の幅を使用 */
+  max-width: 700px; /* 年表自体の最大幅を設定 */
+  overflow: visible; /* コンテンツがはみ出しても表示 */
+  transition: none; /* 展開/縮小アニメーションは不要 */
+  height: auto; /* 高さは自動 */
+  padding-top: 0;
+}
+
+/* 年表展開/縮小ボタンは削除されるため、関連スタイルも削除 */
+.timeline-toggle-button,
+.timeline-toggle-button.expanded .toggle-icon,
+.timeline-toggle-button .toggle-icon,
+.timeline-items-wrapper.collapsed {
+  display: none; /* これらのスタイルは不要になるため非表示 */
+}
+
+/* メンバー構成ブロック（元のレイアウトからモーダルに切り替わるため、不要なスタイルを削除または変更） */
+.member-composition-section {
+  display: none; /* 基本的に非表示 */
+}
+
+/* メンバー構成モーダルのオーバーレイ */
+.member-composition-modal-overlay {
+  position: fixed; /* 画面全体に固定 */
+  top: 0;
+  left: 0;
+  width: 100vw; /* ビューポートの幅全体 */
+  height: 100vh; /* ビューポートの高さ全体 */
+  background-color: rgba(0, 0, 0, 0.6); /* 半透明の背景 */
+  display: flex;
+  justify-content: center; /* 水平中央寄せ */
+  align-items: center; /* 垂直中央寄せ */
+  z-index: 1000; /* 他のコンテンツより前面に表示 */
+}
+
+/* メンバー構成モーダルのコンテナ */
+.member-composition-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  padding: 20px;
+  max-width: 95vw; /* 画面幅に合わせて広くする */
+  max-height: 90vh; /* 画面高さの90% */
+  overflow-y: auto; /* コンテンツがオーバーフローした場合にスクロール */
+  position: relative; /* 閉じるボタンの基準位置 */
+  display: flex;
+  flex-direction: column; /* コンテンツを縦に並べる */
+  align-items: center; /* 中央寄せ */
+}
+
+/* モーダル内の閉じるボタン */
+.modal-close-button {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 2em;
+  color: #555;
+  cursor: pointer;
+  padding: 5px;
+  line-height: 1; /* アイコンが中央になるように */
+  border-radius: 50%; /* 丸いボタン */
+  width: 40px; /* ボタンのサイズ */
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.2s ease;
+}
+
+.modal-close-button:hover {
+  background-color: #f0f0f0;
+}
+
+/* メンバー構成カード（モーダル内で使用） */
 .member-composition-card {
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-  padding: 32px 40px;
-  min-width: 320px;
+  /* box-shadow: 0 2px 8px rgba(0,0,0,0.12); モーダル自体に影があるため不要 */
+  padding: 32px 40px; /* モーダル内では少し調整 */
+  min-width: unset; /* 最小幅を解除し、柔軟に対応 */
   min-height: 120px;
   text-align: center;
-  max-width: 800px; /* 最大幅を設定 */
-  overflow: hidden; /* コンテンツがはみ出さないように */
-  pointer-events: auto; /* クリック可能にする */
+  max-width: 1200px; /* 全グループを横方向に並べるために最大幅を広くする */
+  overflow: hidden;
+  pointer-events: auto;
+  max-height: unset; /* モーダルがスクロールするため、ここでの高さ制限は不要 */
+  overflow-y: visible; /* モーダル内のカード自体はスクロールしない */
 }
 
 /* メンバー構成カード内のヘッダー（日付と年表内容） */
@@ -74,124 +146,40 @@
 }
 
 
-/* 画面幅が狭い場合のメディアクエリ */
-@media (max-width: 900px) { /* 900px以下でレイアウトを切り替え */
-  .member-transition-main-container {
-    flex-direction: column; /* 縦並びにスタック */
-    align-items: center; /* 中央揃え */
+/* メディアクエリは基本的に不要になるが、細かい調整のために残す */
+@media (max-width: 900px) { /* 900px以下でレイアウトを調整 */
+  .member-transition-main-container.timeline-full-width {
     padding: 10px; /* 全体パディングを調整 */
   }
 
   .timeline-section {
-    width: 90%; /* 幅を広げる */
-    max-width: 500px; /* 最大幅を設定 */
-    padding-bottom: 50px; /* ボタンの高さ分の余白を確保 */
-    position: static; /* stickyを解除 */
-    top: auto;
-    align-self: auto;
-    margin-bottom: 20px; /* 年表とメンバー構成の間に余白 */
-    display: flex; /* ボタンとアイテムラッパーを縦に並べるためのFlexbox */
-    flex-direction: column;
-    align-items: center; /* 中央揃え */
-    position: relative; /* ボタンの絶対位置指定の基準 */
+    width: 100%; /* 幅を広げる */
+    max-width: 100%; /* 最大幅を設定 */
   }
 
-  /* 年表展開/縮小ボタンのスタイル */
-  .timeline-toggle-button {
-    display: flex; /* アイコンを中央に配置するため */
-    justify-content: center;
-    align-items: center;
-    width: 100%; /* 年表の幅と同じサイズ */
-    height: 35px; /* 高さを小さく調整 */
-    border-radius: 8px; /* 角を丸く */
-    background-color: rgba(0,0,0,0.03); /* より背景色に近い色に */
-    color: #666; /* 濃い目のテキスト/アイコン色 */
-    border: 1px solid rgba(0,0,0,0.1); /* 微妙な境界線 */
-    cursor: pointer;
-    font-size: 20px; /* アイコンのサイズを調整 */
-    font-weight: bold;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08); /* より控えめな影に */
-    transition: all 0.3s ease; /* ホバー/アクティブ状態のスムーズなトランジション */
-    
-    /* 配置を年表ブロックの最下部に */
-    position: absolute; /* 親要素（.timeline-section）に対して絶対位置指定 */
-    bottom: 0; /* 下からの距離 */
-    left: 0; /* 左からの距離 */
-    margin: 0; /* 中央寄せマージンを解除 */
-    z-index: 10; /* 年表項目より手前に表示 */
-  }
-
-  .timeline-toggle-button:hover {
-    background-color: rgba(0,0,0,0.08); /* ホバー時に少し濃く */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.12);
-  }
-
-  .timeline-toggle-button:active {
-    background-color: rgba(0,0,0,0.12); /* クリック時にさらに濃く */
-    transform: translateY(1px); /* わずかに押し込む効果 */
-  }
-
-  /* アイコンのスタイル */
-  .timeline-toggle-button .toggle-icon {
-    display: inline-block; /* 回転を適用するため */
-    transition: transform 0.3s ease; /* スムーズな回転アニメーション */
-    transform: rotate(90deg); /* 縮小時のデフォルト回転 (右回転で下向き) */
-  }
-
-  /* 展開時のアイコンの回転 */
-  .timeline-toggle-button.expanded .toggle-icon {
-    transform: rotate(-90deg); /* 左回転で上向き */
-  }
-
-  /* 年表アイテムのラッパー */
   .timeline-items-wrapper {
-    width: 100%; /* 親の幅を使用 */
-    overflow: hidden; /* コンテンツがはみ出さないように */
-    transition: height 0.3s ease-out; /* スムーズな展開/縮小アニメーション */
-    height: auto; /* デフォルトは自動高さ (展開時) */
-    padding-top: 0; /* ボタンが下部に移動したので、上部のパディングは不要 */
+    max-width: 100%; /* 年表アイテムラッパーの最大幅も調整 */
   }
 
-  /* 縮小時の年表アイテムラッパー */
-  .timeline-items-wrapper.collapsed {
-    height: 120px; /* 選択された項目のみを表示する高さ */
-  }
-
-  .member-composition-section {
-    width: 90%; /* 幅を広げる */
-    max-width: 500px; /* 最大幅を設定 */
-    min-width: unset; /* 最小幅を解除して縮小を許可 */
-    max-width: unset; /* 最大幅の制約を解除 */
-    position: static; /* stickyを解除 */
-    top: auto;
-    align-self: auto;
-    height: auto; /* 高さをコンテンツに合わせる */
-    overflow-y: visible; /* 内部スクロールを解除（コンテンツが親を押し広げる） */
+  .member-composition-modal {
+    padding: 10px; /* モーダルのパディングを調整 */
   }
 
   .member-composition-card {
-    min-width: unset; /* 最小幅を解除 */
-    max-width: 100%; /* 親要素の幅全体を使用 */
     padding: 20px; /* パディングを調整 */
   }
 }
 
 /* さらに小さい画面（スマートフォンなど）の場合 */
 @media (max-width: 500px) {
-  .member-transition-main-container {
+  .member-transition-main-container.timeline-full-width {
     padding: 5px; /* 全体パディングをさらに狭める */
   }
-  .timeline-section,
-  .member-composition-section {
-    width: 100%; /* 全幅を使用 */
+  .timeline-section {
     padding-left: 5px; /* 左右のパディングを調整 */
     padding-right: 5px;
   }
   .member-composition-card {
     padding: 10px; /* パディングをさらに狭める */
-  }
-  /* 縮小時の年表アイテムの高さ調整 */
-  .timeline-items-wrapper.collapsed {
-    height: 100px; /* より小さな画面向けに調整 */
   }
 }
