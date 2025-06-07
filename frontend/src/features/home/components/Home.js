@@ -86,7 +86,7 @@ const Home = () => {
   }, [allMembers]); // allMembersが更新されたときに再計算
 
   if (loading) {
-    return <Layout><div>読み込み中...</div></Layout>;
+    return <Layout><div>Loading...</div></Layout>;
   }
 
   return (

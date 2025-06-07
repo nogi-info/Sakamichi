@@ -11,7 +11,7 @@ import Cubelet from "../utils/Cubelet";
 import RotatingGroup from "../utils/RotatingGroup";
 import AxesArrows from "../utils/AxesArrows";
 import DebugPanel from "./DebugPanel";
-import LeaderboardAndScoreSave from "./LeaderboardAndScoreSave"; // No direct import of db, auth, appId here anymore
+import LeaderboardAndScoreSave from "./LeaderboardAndScoreSave"; // BestTimesDisplayのimportは不要に
 
 // カスタムフック
 import { useCubeState } from "../hooks/useCubeState";
@@ -52,6 +52,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
   const [groupData, setGroupData] = useState([]); // グループCSVデータを保持するstate
   const [links, setLinks] = useState([]); // リンク情報を保持するstate
   const [selectedMember, setSelectedMember] = useState(null); // 選択されたメンバーを記憶するstate
+  const [showLeaderboard, setShowLeaderboard] = useState(false); // ベストタイム表の表示状態を追加
 
   // Firebase関連のstateをRubiksCube内に移動
   const [firebaseAuthReady, setFirebaseAuthReady] = useState(false);
@@ -59,6 +60,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
   const [authInstance, setAuthInstance] = useState(null);
   const [appIdInstance, setAppIdInstance] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null); // 認証されたユーザーIDを保持
+  // leaderboardTimesForDisplay, highlightedScoreId, latestUserScoreAfterGame はLeaderboardAndScoreSaveが管理するため削除
 
   // RubiksCubeがマウントされたときにFirebaseを初期化
   useEffect(() => {
@@ -78,6 +80,9 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     }
     initFirebaseForCube();
   }, []); // コンポーネントマウント時に一度だけ実行
+
+  // ベストタイム (上位20件) をFirestoreからリアルタイムで読み込むuseEffect (RubiksCube内で管理) は削除
+  // LeaderboardAndScoreSaveが全てのリーダーボードデータフェッチを管理するため
 
   // グループCSVデータとリンク情報を読み込むuseEffect
   useEffect(() => {
@@ -266,6 +271,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
 
     await randomRotate(); // キューブをシャッフル
     startStopwatch(); // ストップウォッチを開始
+    setShowLeaderboard(false); // ゲーム開始時はリーダーボードを非表示
   };
 
   const handleRetry = () => {
@@ -273,8 +279,8 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     resetCube(); // キューブの状態をリセット
     resetStopwatch(); // ストップウォッチをリセット
     setGameStarted(false); // ゲーム開始状態をfalseに戻す
-    setDifficulty(2); // 難易度を初期値に戻す（任意）
     setSelectedMember(null); // 選択されたメンバーをリセット
+    setShowLeaderboard(false); // リトライ時はリーダーボードを非表示
   };
 
   // Firebaseが初期化されるまでローディング表示
@@ -282,6 +288,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
+        <p>Loading...</p>
       </div>
     );
   }
@@ -330,11 +337,9 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
         <OrbitControls {...getOrbitControlsConfig()} />
       </Canvas>
 
-      {/* LeaderboardAndScoreSaveコンポーネントをレンダリング */}
-      {/* isCleared, time, difficulty, selectedMember, groupData, links をPropsとして渡す */}
-      {/* onRetryを渡して、LeaderboardAndScoreSaveからリトライをトリガーできるようにする */}
-      {/* LeaderboardAndScoreSaveコンポーネントをレンダリング。Firebaseインスタンスを渡す */}
+      {/* LeaderboardAndScoreSaveコンポーネントをレンダリング (ゲームクリア時) */}
       <LeaderboardAndScoreSave 
+        mode="gameClear" // 新しいmode propを渡す
         isCleared={isCleared}
         time={time}
         difficulty={difficulty}
@@ -365,7 +370,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
                 name="difficulty" // 同じname属性でグループ化
                 value={1}
                 checked={difficulty === 1}
-                onChange={() => setDifficulty(1)}
+                onChange={(e) => setDifficulty(parseInt(e.target.value))} // parseIntで数値に変換
                 className="difficulty-radio"
               />
               Level 1 (色のみ)
@@ -376,7 +381,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
                 name="difficulty"
                 value={2}
                 checked={difficulty === 2}
-                onChange={() => setDifficulty(2)}
+                onChange={(e) => setDifficulty(parseInt(e.target.value))} // parseIntで数値に変換
                 className="difficulty-radio"
               />
               Level 2 (文字+色)
@@ -387,12 +392,39 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
                 name="difficulty"
                 value={3}
                 checked={difficulty === 3}
-                onChange={() => setDifficulty(3)}
+                onChange={(e) => setDifficulty(parseInt(e.target.value))} // parseIntで数値に変換
                 className="difficulty-radio"
               />
               Level 3 (文字のみ)
             </label>
           </div>
+
+          {/* ベストタイム表示/非表示トグルボタン */}
+          <button 
+            onClick={() => setShowLeaderboard(!showLeaderboard)} 
+            className="game-button game-button-secondary leaderboard-toggle-button" // 新しいクラスを追加
+          >
+            {showLeaderboard ? 'ベストタイムを非表示' : 'ベストタイムを表示'}
+          </button>
+
+          {/* ベストタイム表の表示 (LeaderboardAndScoreSaveをdisplayOnlyモードで呼び出す) */}
+          {showLeaderboard && (
+            <LeaderboardAndScoreSave
+              mode="displayOnly" // 新しいmode propを渡す
+              difficulty={difficulty}
+              db={dbInstance} 
+              auth={authInstance}
+              appId={appIdInstance} 
+              // displayOnlyモードでは以下のpropsは不要
+              // isCleared={false}
+              // time={0}
+              // selectedMember={null}
+              // groupData={[]}
+              // links={[]}
+              // onRetry={() => {}}
+            />
+          )}
+
         </div>
       )}
 

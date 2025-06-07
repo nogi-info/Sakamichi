@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 // Firebase Firestoreの関数をインポート
 import { collection, query, orderBy, limit, getDocs, addDoc, deleteDoc, doc, where, onSnapshot } from 'firebase/firestore';
-// Firebase設定ファイルからdb, appId, authインスタンスをインポートする代わりに、Propsとして受け取る
-// import { db, appId, auth } from '../../../firebaseConfig'; // この行は削除
 
 // MemberCardコンポーネントをインポート（選択されたメンバー表示用）
 import MemberCard from "../../member-list/components/MemberCard"; 
@@ -36,20 +34,74 @@ const formatTime = (totalSeconds) => {
 };
 
 /**
+ * ベストタイムリストを表示する内部ヘルパーコンポーネント。
+ * このコンポーネントはLeaderboardAndScoreSave.js内で完結し、外部にはエクスポートされない。
+ * @param {object[]} leaderboardTimes - 表示するリーダーボードのスコアリスト。
+ * @param {string|null} highlightedScoreId - ハイライト表示するスコアのID。
+ * @param {object|null} latestUserScoreAfterGame - ゲーム後にユーザーが達成した最新スコア（圏外の場合）。
+ * @param {number} difficulty - 現在表示している難易度レベル。
+ * @param {React.RefObject} listRef - ベストタイムリストのコンテナ（ul）への参照。
+ * @param {object} scoreRefs - 個々のリストアイテム（li）への参照を保持するオブジェクト。
+ * @param {boolean} showTitle - タイトル（「ベストタイム (Level X)」）を表示するかどうか。
+ */
+const BestTimesDisplay = ({ leaderboardTimes, highlightedScoreId, latestUserScoreAfterGame, difficulty, listRef, scoreRefs, showTitle = true }) => {
+  return (
+    <div className="best-times-section">
+      {showTitle && <h3>ベストタイム (Level {difficulty})</h3>}
+      {leaderboardTimes.length > 0 || (latestUserScoreAfterGame && latestUserScoreAfterGame.id === highlightedScoreId) ? (
+        <ul className="best-times-list" ref={listRef}>
+          {leaderboardTimes.map((score, index) => (
+            <li
+              key={score.id || index}
+              className={score.id === highlightedScoreId ? 'new-score' : ''}
+              ref={el => scoreRefs.current[score.id] = el}
+            >
+              <span className="rank">{index + 1}.</span>
+              <span className="name">{score.username}</span>
+              <span className="time">{formatTime(score.time)}</span>
+            </li>
+          ))}
+          {/* ユーザーのスコアがトップ20圏外の場合に、リストの最後に「あなたの記録」として表示 */}
+          {latestUserScoreAfterGame &&
+           highlightedScoreId === latestUserScoreAfterGame.id &&
+           !leaderboardTimes.some(score => score.id === latestUserScoreAfterGame.id) && ( // 圏外スコアの場合のみ表示
+            <li
+              key={latestUserScoreAfterGame.id}
+              className="new-score user-non-top20-score"
+              ref={el => scoreRefs.current[latestUserScoreAfterGame.id] = el}
+            >
+              <span className="rank">-</span>
+              <span className="name">あなたの記録</span>
+              <span className="time">{formatTime(latestUserScoreAfterGame.time)}</span>
+            </li>
+          )}
+        </ul>
+      ) : (
+        <p className="no-score-message">
+          この難易度での記録はまだありません。
+        </p>
+      )}
+    </div>
+  );
+};
+
+
+/**
  * リーダーボードの表示とスコア保存モーダルを管理するコンポーネント。
  * RubiksCubeコンポーネントから以下のPropsを受け取ります:
- * - isCleared: ゲームがクリアされたかどうか (boolean)
- * - time: クリアタイム (number)
+ * - mode: 'gameClear' (ゲームクリア時) または 'displayOnly' (ベストタイム表示のみ)
+ * - isCleared: ゲームがクリアされたかどうか (boolean, mode='gameClear'時のみ使用)
+ * - time: クリアタイム (number, mode='gameClear'時のみ使用)
  * - difficulty: 現在の難易度 (number)
- * - selectedMember: ルービックキューブの面に表示されたメンバー情報 (object, optional)
- * - groupData: グループデータ (array)
- * - links: リンクデータ (array)
- * - onRetry: 「もう一度プレイ」ボタンがクリックされたときに呼び出す関数 (function)
+ * - selectedMember: ルービックキューブの面に表示されたメンバー情報 (object, optional, mode='gameClear'時のみ使用)
+ * - groupData: グループデータ (array, mode='gameClear'時のみ使用)
+ * - links: リンクデータ (array, mode='gameClear'時のみ使用)
+ * - onRetry: 「もう一度プレイ」ボタンがクリックされたときに呼び出す関数 (function, mode='gameClear'時のみ使用)
  * - db: Firebase Firestoreのdbインスタンス (Firebaseの初期化後にRubiksCubeから渡される)
  * - auth: Firebase Authのauthインスタンス (Firebaseの初期化後にRubiksCubeから渡される)
  * - appId: FirebaseのアプリID (Firebaseの初期化後にRubiksCubeから渡される)
  */
-function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, groupData, links, onRetry, db, auth, appId }) { // db, auth, appIdをPropsとして受け取る
+function LeaderboardAndScoreSave({ mode, isCleared, time, difficulty, selectedMember, groupData, links, onRetry, db, auth, appId }) {
   // Firestore関連のState
   const [leaderboardTimes, setLeaderboardTimes] = useState([]); // Firestoreから取得したベストタイム (常に上位20件)
   const [showSaveScoreModal, setShowSaveScoreModal] = useState(false); // スコア保存モーダルの表示状態
@@ -64,6 +116,7 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
   const scoreRefs = useRef({}); // 個々のリストアイテム (li) への参照を保持するオブジェクト
 
   // ベストタイム (上位20件) をFirestoreからリアルタイムで読み込むuseEffect
+  // このコンポーネントがモードに関わらずマウントされている限り、データをフェッチし続ける
   useEffect(() => {
     // db, appId, auth がpropsとして渡されるので、それらが存在するかチェック
     if (!db || !appId || !auth) { 
@@ -91,7 +144,8 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
 
   // ゲームクリア時にスコア保存モーダルの表示と最新スコアの保存を管理するuseEffect
   useEffect(() => {
-    if (isCleared && time > 0) { // クリア状態であり、タイムが0より大きい場合
+    // modeが'gameClear'の場合のみ、このロジックを適用
+    if (mode === 'gameClear' && isCleared && time > 0) { // クリア状態であり、タイムが0より大きい場合
       setScoreToSave({ time: time, difficulty: difficulty }); // 保存するスコアを設定
       setInputUsername(''); // ユーザー名をリセット
       setSaveScoreMessage(''); // メッセージをリセット
@@ -159,7 +213,8 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
         // この一時的なIDをハイライト対象として設定
         setHighlightedScoreId('user-latest-score-id-' + Date.now()); 
       }
-    } else if (!isCleared) { // ゲームがクリア状態ではなくなった場合（例: リトライ時）
+    } else if (mode === 'gameClear' && !isCleared) { // ゲームがクリア状態ではなくなった場合（例: リトライ時）
+      // modeが'gameClear'の場合のみクリア処理を実行
       setShowSaveScoreModal(false); // モーダルを非表示
       setScoreToSave(null); // 保存するスコアをクリア
       setInputUsername(''); // ユーザー名をリセット
@@ -168,7 +223,8 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
       setLatestUserScoreAfterGame(null); // ユーザーの最新スコアをクリア
       setPotentialRank(null); // 潜在的な順位もリセット
     }
-  }, [isCleared, time, difficulty, leaderboardTimes]); // leaderboardTimesも依存配列に追加
+    // modeが'displayOnly'の場合は、isClearedやtimeに依存しないため、このuseEffectは反応しない
+  }, [mode, isCleared, time, difficulty, leaderboardTimes]); // leaderboardTimesも依存配列に追加
 
   // highlightedScoreIdが設定されたら、そのスコアまでスクロールするuseEffect
   useEffect(() => {
@@ -241,10 +297,11 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
     setPotentialRank(null); // 潜在的な順位もリセット
   };
 
-  return (
-    <>
-      {/* ゲームクリア表示パネル */}
-      {isCleared && (
+  // mode='gameClear' の場合のレンダリング
+  if (mode === 'gameClear' && isCleared) {
+    return (
+      <>
+        {/* ゲームクリア表示パネル */}
         <div className="game-clear-panel game-overlay-card">
           <div className="clear-message">クリア！</div>
           <div className="clear-time">{formatTime(time)}</div>
@@ -263,80 +320,71 @@ function LeaderboardAndScoreSave({ isCleared, time, difficulty, selectedMember, 
           )}
 
           {/* ベストタイム表示セクション */}
-          <div className="best-times-section">
-            <h3>ベストタイム (Level {difficulty})</h3>
-            {leaderboardTimes.length > 0 || (isCleared && latestUserScoreAfterGame) ? ( // クリア済みで圏外スコアがある場合もリスト表示
-              <ul className="best-times-list" ref={listRef}> {/* Refをul要素に設定 */}
-                {leaderboardTimes.map((score, index) => (
-                  <li 
-                    key={score.id || index} 
-                    className={score.id === highlightedScoreId ? 'new-score' : ''}
-                    ref={el => scoreRefs.current[score.id] = el} // 各li要素にRefを設定
-                  > 
-                    <span className="rank">{index + 1}.</span> 
-                    <span className="name">{score.username}</span>
-                    <span className="time">{formatTime(score.time)}</span>
-                  </li>
-                ))}
-                {/* ユーザーのスコアがトップ20圏外の場合に、リストの最後に「あなたの記録」として表示 */}
-                {latestUserScoreAfterGame && 
-                 highlightedScoreId === latestUserScoreAfterGame.id && (
-                  <li 
-                    key={latestUserScoreAfterGame.id} 
-                    className="new-score user-non-top20-score" // 圏外スコア用の特別なクラス
-                    ref={el => scoreRefs.current[latestUserScoreAfterGame.id] = el}
-                  >
-                    <span className="rank">-</span> {/* 順位を「-」に変更 */}
-                    <span className="name">あなたの記録</span> {/* 名前を「あなたの記録」に変更 */}
-                    <span className="time">{formatTime(latestUserScoreAfterGame.time)}</span>
-                  </li>
-                )}
-              </ul>
-            ) : (
-              // リーダーボードにまだスコアがない場合のメッセージ
-              <p className="no-score-message">
-                この難易度での記録はまだありません。
-                {/* 圏外スコアの場合のメッセージは削除されたため、条件から外す */}
-              </p>
-            )}
-          </div>
+          <BestTimesDisplay 
+            leaderboardTimes={leaderboardTimes}
+            highlightedScoreId={highlightedScoreId}
+            latestUserScoreAfterGame={latestUserScoreAfterGame}
+            difficulty={difficulty}
+            listRef={listRef}
+            scoreRefs={scoreRefs}
+            showTitle={true} // クリア時はタイトルを表示
+          />
 
           <button onClick={onRetry} className="game-button game-button-primary">
             もう一度プレイ
           </button>
         </div>
-      )}
 
-      {/* スコア保存モーダル */}
-      {showSaveScoreModal && (
-        <div className="save-score-modal game-overlay-card">
-          {/* potentialRankが存在すれば順位を表示、そうでなければ一般的なタイトル */}
-          <h3>{potentialRank ? `${potentialRank}位にランクイン！` : 'スコアを登録'}</h3>
-          <p>
-            タイム: <span className="score-value">{formatTime(scoreToSave?.time || 0)}</span> {' '}
-            (Level: <span className="score-value">{scoreToSave?.difficulty}</span>)
-          </p>
-          <input
-            type="text"
-            placeholder="ニックネームを入力してください"
-            value={inputUsername}
-            onChange={(e) => setInputUsername(e.target.value)}
-            maxLength={20} // 名前入力の最大長
-            className="username-input"
-          />
-          {saveScoreMessage && <p className="save-message">{saveScoreMessage}</p>}
-          <div className="modal-actions">
-            <button onClick={handleSaveScore} className="game-button game-button-primary">
-              登録する
-            </button>
-            <button onClick={handleCancelSaveScore} className="game-button game-button-secondary">
-              キャンセル
-            </button>
+        {/* スコア保存モーダル */}
+        {showSaveScoreModal && (
+          <div className="save-score-modal game-overlay-card">
+            {/* potentialRankが存在すれば順位を表示、そうでなければ一般的なタイトル */}
+            <h3>{potentialRank ? `${potentialRank}位にランクイン！` : 'スコアを登録'}</h3>
+            <p>
+              タイム: <span className="score-value">{formatTime(scoreToSave?.time || 0)}</span> {' '}
+              (Level: <span className="score-value">{scoreToSave?.difficulty}</span>)
+            </p>
+            <input
+              type="text"
+              placeholder="ニックネームを入力してください"
+              value={inputUsername}
+              onChange={(e) => setInputUsername(e.target.value)}
+              maxLength={20} // 名前入力の最大長
+              className="username-input"
+            />
+            {saveScoreMessage && <p className="save-message">{saveScoreMessage}</p>}
+            <div className="modal-actions">
+              <button onClick={handleSaveScore} className="game-button game-button-primary">
+                登録する
+              </button>
+              <button onClick={handleCancelSaveScore} className="game-button game-button-secondary">
+                キャンセル
+              </button>
+            </div>
           </div>
-        </div>
-      )}
-    </>
-  );
+        )}
+      </>
+    );
+  } 
+  // mode='displayOnly' の場合のレンダリング
+  else if (mode === 'displayOnly') {
+    return (
+      <div className="leaderboard-display-panel game-overlay-card">
+        <BestTimesDisplay
+          leaderboardTimes={leaderboardTimes}
+          highlightedScoreId={highlightedScoreId}
+          latestUserScoreAfterGame={latestUserScoreAfterGame}
+          difficulty={difficulty}
+          listRef={listRef}
+          scoreRefs={scoreRefs}
+          showTitle={true} // 表示専用モードでもタイトルを表示
+        />
+      </div>
+    );
+  }
+  // その他の場合は何もレンダリングしない (modeが設定されていない、またはisClearedでない場合など)
+  return null;
 }
 
 export default LeaderboardAndScoreSave;
+

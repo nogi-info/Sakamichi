@@ -65,6 +65,13 @@
   top: 20px; /* ストップウォッチやクリアパネルと同じ位置に調整 */
   left: 50%;
   transform: translateX(-50%); /* 水平中央揃え */
+  /* ベストタイムパネルが展開されたときに下に移動するように調整 */
+  align-items: center; /* 中央寄せ */
+  justify-content: flex-start; /* 上寄せ */
+  padding-bottom: 20px; /* 下に少しパディング */
+  height: auto; /* コンテンツに合わせて高さを自動調整 */
+  max-height: calc(100vh - var(--header-height-desktop) - 40px); /* 画面高さに合わせて最大高さを制限 */
+  overflow-y: auto; /* コンテンツがはみ出る場合にスクロール可能にする */
 }
 
 /* ゲーム中の時間表示パネル */
@@ -138,6 +145,23 @@
 .game-button-primary:active {
   background-color: #531b60; /* アクティブでさらに濃く */
 }
+
+/* セカンダリボタン（ベストタイムトグル）のスタイル */
+.game-button-secondary {
+  background-color: #f0f0f0; /* 薄いグレー */
+  color: #666;
+  border-color: #ccc;
+}
+
+.game-button-secondary:hover {
+  background-color: #e0e0e0;
+  border-color: #bbb;
+}
+
+.game-button-secondary:active {
+  background-color: #d0d0d0;
+}
+
 
 /* 難易度選択セクション */
 .difficulty-selection {
@@ -274,6 +298,7 @@
   color: #812990;
   font-size: 1.4em;
   margin-bottom: 15px;
+  margin-top: 0px;
 }
 
 .best-times-list {
@@ -338,6 +363,31 @@
   text-align: right;
 }
 
+/* ベストタイム表示トグルボタンのスタイル */
+.leaderboard-toggle-button {
+  margin-top: 15px; /* ボタンと難易度選択の間にスペース */
+  padding: 8px 20px;
+  font-size: 16px;
+  min-width: 140px;
+}
+
+/* ベストタイム表示パネルのスタイル */
+.leaderboard-display-panel {
+  position: relative; /* game-overlay-card の transform が効かないように */
+  left: auto;
+  top: auto;
+  transform: none;
+  width: 100%; /* 親要素 (game-start-panel) の幅に合わせる */
+  margin-top: 20px; /* 上の要素との間隔 */
+  padding: 20px; /* パディングを調整 */
+  box-sizing: border-box; /* パディングを幅に含める */
+}
+
+/* leaderboard-display-panel内のベストタイムセクションの調整 */
+.leaderboard-display-panel .best-times-section {
+  margin-top: 0; /* この余白を削除 */
+  padding-top: 0; /* この余白も削除 */
+}
 
 /* レスポンシブデザイン */
 @media (max-width: 768px) {
@@ -357,6 +407,13 @@
     top: 20px; /* モバイルでも上部に配置を維持 */
     left: 50%;
     transform: translateX(-50%);
+  }
+
+  .game-start-panel {
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-height: calc(100vh - var(--header-height-mobile) - 40px); /* モバイルでの最大高さを制限 */
   }
 
   .clear-message {
@@ -399,6 +456,10 @@
   .difficulty-radio:checked::after {
     width: 7px;
     height: 7px;
+  }
+
+  .leaderboard-display-panel {
+    padding: 15px; /* モバイルでのパディング調整 */
   }
 }
 
