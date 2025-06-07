@@ -66,7 +66,7 @@
   display: flex;
   justify-content: center; /* 水平中央寄せ */
   align-items: center; /* 垂直中央寄せ */
-  z-index: 1000; /* 他のコンテンツより前面に表示 */
+  z-index: 100000; /* ヘッダーのz-index (99999) よりも高い値に設定 */
 }
 
 /* メンバー構成モーダルのコンテナ */
@@ -74,14 +74,15 @@
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-  padding: 20px;
+  padding: 0; /* paddingを0にし、内部の要素でパディングを管理 */
   max-width: 95vw; /* 画面幅に合わせて広くする */
   max-height: 90vh; /* 画面高さの90% */
-  overflow-y: auto; /* コンテンツがオーバーフローした場合にスクロール */
+  overflow: hidden; /* スクロールは内部の要素に任せる */
   position: relative; /* 閉じるボタンの基準位置 */
-  display: flex;
-  flex-direction: column; /* コンテンツを縦に並べる */
-  align-items: center; /* 中央寄せ */
+  display: flex; /* Flexboxコンテナ */
+  flex-direction: column; /* 縦方向に要素を並べる */
+  align-items: center; /* 水平中央揃え */
+  /* min-width, min-height は内部コンテンツに任せる */
 }
 
 /* モーダル内の閉じるボタン */
@@ -103,48 +104,135 @@
   justify-content: center;
   align-items: center;
   transition: background-color 0.2s ease;
+  z-index: 10; /* ナビゲーションボタンより手前に */
 }
 
 .modal-close-button:hover {
   background-color: #f0f0f0;
 }
 
-/* メンバー構成カード（モーダル内で使用） */
-.member-composition-card {
+/* メンバー構成カード（このスタイルは、新しい.member-composition-bodyに適用される） */
+/* このクラスはHTMLから削除されたため、コメントアウトまたは削除します */
+/* .member-composition-card {
   background: #fff;
   border-radius: 12px;
-  /* box-shadow: 0 2px 8px rgba(0,0,0,0.12); モーダル自体に影があるため不要 */
-  padding: 32px 40px; /* モーダル内では少し調整 */
-  min-width: unset; /* 最小幅を解除し、柔軟に対応 */
+  padding: 32px 40px;
+  min-width: unset;
   min-height: 120px;
   text-align: center;
-  max-width: 1200px; /* 全グループを横方向に並べるために最大幅を広くする */
+  max-width: 1200px;
   overflow: hidden;
   pointer-events: auto;
-  max-height: unset; /* モーダルがスクロールするため、ここでの高さ制限は不要 */
-  overflow-y: visible; /* モーダル内のカード自体はスクロールしない */
+  max-height: unset;
+  overflow-y: visible;
+} */
+
+
+/* モーダルヘッダー（日付と年表内容、ナビゲーションボタンを含む） */
+.member-composition-header {
+  /* sticky設定 */
+  position: sticky;
+  top: 0;
+  z-index: 5; /* コンテンツより手前、閉じるボタンより奥 */
+  background: #fff; /* 背景色を設定して下位コンテンツを覆い隠す */
+  width: 100%; /* 親要素の幅全体 */
+  box-sizing: border-box; /* paddingをwidthに含める */
+
+  /* 元のスタイルを継承しつつ調整 */
+  margin-bottom: 0; /* 下のマージンを0にしてbodyと接続 */
+  padding: 32px 40px 15px; /* 閉じるボタンと重ならないように調整 */
+  border-bottom: 2px solid #f0f0f0; /* 控えめな下線 */
+  position: relative; /* 閉じるボタンの基準位置のため維持 */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* ヘッダーが浮き上がって見えるように影を追加 */
+
+  display: flex;
+  flex-direction: column; /* 要素を縦に並べる */
+  align-items: center; /* 水平方向中央揃え */
+  justify-content: center; /* 垂直方向中央揃え */
 }
 
-/* メンバー構成カード内のヘッダー（日付と年表内容） */
-.member-composition-header {
-  margin-bottom: 20px; /* 下にスペースを追加 */
-  padding-bottom: 15px; /* 下線とのパディング */
-  border-bottom: 2px solid #f0f0f0; /* 控えめな下線 */
+/* 日付とナビゲーションボタンをまとめるコンテナ */
+.member-composition-date-nav-container {
+    display: flex;
+    align-items: center; /* 垂直中央揃え */
+    justify-content: center; /* 水平中央揃え */
+    margin-bottom: 8px; /* 日付・ボタンとラベルの間のスペース */
+    width: 100%; /* 親の幅いっぱいに広げ、Flexboxが中央に配置できるようにする */
 }
 
 .member-composition-date {
   color: var(--group-color); /* グループカラーを適用 */
   font-weight: bold;
   font-size: 1.4em; /* 少し大きめに */
-  margin-bottom: 5px; /* 日付とラベルの間のスペース */
+  flex-shrink: 0; /* 縮まないようにする */
+  margin: 0 20px; /* 日付とボタンの間にスペースを追加 */
+  width: 120px; /* 日付の幅を固定 */
 }
 
 .member-composition-label {
   font-weight: bold;
   font-size: 1.1em;
   color: #555; /* 落ち着いた色 */
+  text-align: center; /* 念のため中央揃え */
 }
 
+/* モーダル内のナビゲーションボタンのコンテナ */
+.modal-navigation-buttons {
+  /* 新しい.member-composition-date-nav-container内で管理するため、絶対位置指定を削除 */
+  /* position: absolute; */
+  /* top: 50%; */
+  /* transform: translateY(-50%); */
+  /* left: 0; */
+  /* right: 0; */
+  display: flex; /* Flexboxを維持 */
+  /* justify-content: space-between; */ /* 日付とボタンを隣接させるため削除 */
+  padding: 0; /* 親コンテナがスペースを管理するため不要 */
+  pointer-events: auto; /* ボタン自体はクリック可能にする */
+}
+
+/* ナビゲーションボタンの基本スタイルを調整 (常に小さいサイズに固定) */
+.nav-button {
+  padding: 6px 10px; /* 小さいパディング */
+  margin: 0 8px; /* 日付との間にスペース */
+  background-color: #e9ecef; /* 明るいグレー */
+  color: #495057; /* 濃い目のテキスト */
+  border: 1px solid #dee2e6; /* 境界線 */
+  border-radius: 25px; /* ピル型 */
+  cursor: pointer;
+  font-size: 0.9em; /* 小さいフォントサイズ */
+  font-weight: 500; /* 中程度の太さ */
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 控えめな影 */
+  pointer-events: auto; /* ボタン自体はクリック可能にする */
+}
+
+.nav-button:hover {
+  background-color: #e2e6ea;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  transform: none;
+}
+
+.nav-button:active {
+  transform: none;
+}
+
+.nav-button:disabled {
+  background-color: #f8f9fa; /* より薄いグレー */
+  color: #ced4da; /* より薄い文字色 */
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* モーダルのスクロール可能な本体部分 */
+.member-composition-body {
+  flex-grow: 1; /* 残りのスペースを全て占める */
+  overflow-y: auto; /* この部分のみスクロール可能にする */
+  width: 100%; /* 親の幅に合わせる */
+  box-sizing: border-box; /* パディングをwidthに含める */
+  padding: 20px 40px; /* コンテンツのパディング */
+  text-align: center;
+  max-width: 1200px; /* メンバーリストの最大幅を設定 */
+}
 
 /* メディアクエリは基本的に不要になるが、細かい調整のために残す */
 @media (max-width: 900px) { /* 900px以下でレイアウトを調整 */
@@ -162,12 +250,21 @@
   }
 
   .member-composition-modal {
-    padding: 10px; /* モーダルのパディングを調整 */
+    padding: 0; /* モーダルのパディングを0に設定 */
   }
 
-  .member-composition-card {
-    padding: 20px; /* パディングを調整 */
+  .member-composition-header {
+    /* モバイル・タブレット向けに左右のパディングを調整 */
+    padding: 20px 40px 10px; /* パディングを再調整 */
   }
+
+  .member-composition-body {
+    padding: 15px 20px; /* ボディのパディングを調整 */
+  }
+
+  /* .modal-navigation-buttons { */ /* 新しい構造で管理するため、このメディアクエリは不要 */
+  /* padding: 0 10px; */
+  /* } */
 }
 
 /* さらに小さい画面（スマートフォンなど）の場合 */
@@ -179,7 +276,11 @@
     padding-left: 5px; /* 左右のパディングを調整 */
     padding-right: 5px;
   }
-  .member-composition-card {
-    padding: 10px; /* パディングをさらに狭める */
+  .member-composition-header {
+    /* スマートフォン向けに左右のパディングを調整 */
+    padding: 15px 20px 8px; /* パディングを再調整 */
+  }
+  .member-composition-body {
+    padding: 10px 10px; /* ボディのパディングをさらに調整 */
   }
 }

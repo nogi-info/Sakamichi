@@ -26,14 +26,11 @@ const MemberTransition = ({ setModalOpen }) => {
   const [events, setEvents] = useState([]);
   const [groupPeriods, setGroupPeriods] = useState([]);
   const [loading, setLoading] = useState(true);
-  // currentIdxは、選択された年表の項目を保持するために残します
-  const [currentIdx, setCurrentIdx] = useState(0);
   const itemRefs = useRef([]); // 年表アイテムへの参照を保持
 
-  // 新しいstate: メンバー構成モーダルの表示状態
   const [isCompositionModalOpen, setIsCompositionModalOpen] = useState(false);
-  // 選択されたイベントの情報を保持するstate
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEventIndex, setSelectedEventIndex] = useState(0); // 選択されたイベントのインデックス
 
   useEffect(() => {
     let baseMembers = [];
@@ -130,6 +127,19 @@ const MemberTransition = ({ setModalOpen }) => {
     });
   }, []);
 
+  // selectedEventが変更されたときにselectedEventIndexを更新
+  useEffect(() => {
+    if (selectedEvent && events.length > 0) {
+      const index = events.findIndex(
+        (e) => e.date.toISOString() === selectedEvent.date.toISOString()
+      );
+      if (index !== -1) {
+        setSelectedEventIndex(index);
+      }
+    }
+  }, [selectedEvent, events]);
+
+
   // 指定時点で現役のメンバーをグループごと・加入期ごとに抽出
   const getActiveMembersByGroupAndPeriod = (targetDate) => {
     if (!members.length || !startDates.length) return {};
@@ -193,6 +203,27 @@ const MemberTransition = ({ setModalOpen }) => {
       setModalOpen(true); // App.jsにモーダルが開いたことを通知
     }
   };
+
+  // 前のイベントに移動
+  const handlePrevEvent = () => {
+    const prevIndex = selectedEventIndex - 1;
+    if (prevIndex >= 0) {
+      setSelectedEvent(events[prevIndex]);
+      // setSelectedEventIndex(prevIndex); // useEffectで更新されるため不要
+    }
+  };
+
+  // 次のイベントに移動
+  const handleNextEvent = () => {
+    const nextIndex = selectedEventIndex + 1;
+    if (nextIndex < events.length) {
+      setSelectedEvent(events[nextIndex]);
+      // setSelectedEventIndex(nextIndex); // useEffectで更新されるため不要
+    }
+  };
+
+  const isPrevDisabled = selectedEventIndex === 0;
+  const isNextDisabled = selectedEventIndex === events.length - 1;
 
   return (
     <Layout>
@@ -277,6 +308,32 @@ const MemberTransition = ({ setModalOpen }) => {
             >
               &times;
             </button>
+            {/* 日付と年表の内容の表示部分を新しい構造とクラスで囲む */}
+            <div className="member-composition-header" style={{ '--group-color': groupColors[selectedEvent.group] || "#812990" }}>
+              {/* 日付とナビゲーションボタンをまとめるコンテナ */}
+              <div className="member-composition-date-nav-container">
+                <button
+                  className="nav-button prev-button"
+                  onClick={handlePrevEvent}
+                  disabled={isPrevDisabled}
+                >
+                  {"＜"}
+                </button>
+                <div className="member-composition-date">
+                  {selectedEvent.date.toLocaleDateString()}
+                </div>
+                <button
+                  className="nav-button next-button"
+                  onClick={handleNextEvent}
+                  disabled={isNextDisabled}
+                >
+                  {"＞"}
+                </button>
+              </div>
+              <div className="member-composition-label">
+                {selectedEvent.label}
+              </div>
+            </div>
             <div
               className="member-composition-card"
               style={{
@@ -294,16 +351,6 @@ const MemberTransition = ({ setModalOpen }) => {
                 overflowY: "auto",
               }}
             >
-              {/* 日付と年表の内容の表示部分を新しい構造とクラスで囲む */}
-              <div className="member-composition-header" style={{ '--group-color': groupColors[selectedEvent.group] || "#812990" }}>
-                <div className="member-composition-date">
-                  {selectedEvent.date.toLocaleDateString()}
-                </div>
-                <div className="member-composition-label">
-                  {selectedEvent.label}
-                </div>
-              </div>
-
               <div style={{
                 display: "flex",
                 gap: "16px",
