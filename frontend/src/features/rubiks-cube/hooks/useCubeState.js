@@ -8,6 +8,10 @@ import {
 } from "../utils/cubeUtils";
 import { isCubeSolved } from "../utils/cubeCheckUtils";
 
+const randomRotateNum = (process.env.REACT_APP_DEBUG === 'true')
+  ? 1   // デバッグ用
+  : 20; // 本番用
+
 /**
  * ルービックキューブの基本状態を管理するカスタムフック
  * @param {string} faceKanji - 各面に表示する漢字文字列
@@ -88,7 +92,7 @@ export function useCubeState(faceKanji = "乃木櫻日向坂", difficulty, stopS
   /**
    * ランダム回転処理
    */
-  const randomRotate = useCallback(async (count = 20, delay = 100) => {
+  const randomRotate = useCallback(async (count = randomRotateNum, delay = 100) => {
     // 現在の状態を初期状態として保存
     setInitialCubelets(cubelets);
     setInitialFaceTextures(faceTextures);

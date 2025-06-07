@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from "react"; // useState と useEffect をインポート
+import React, { useState, useEffect, Suspense, lazy } from "react"; // Suspense と lazy をインポート
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom"; // React Routerのコンポーネントをインポート
 import Home from "./features/home/components/Home"; // ホームページのコンポーネントをインポート
 import MemberListByYear from "./features/member-list/components/MemberListByYear"; // 生年月日順ソートページのコンポーネントをインポート
 import MemberTransition from "./features/member-transition/components/MemberTransition"; // メンバー構成の遷移ページのコンポーネントをインポート
-import RubiksCube from "./features/rubiks-cube/components/RubiksCube"; // ルービックキューブページのコンポーネントをインポート
 import './App.css'; // アプリケーション全体のスタイルシートをインポート
 
-// Firebaseの初期化関数とインスタンスをインポート
-import { initializeFirebaseAndAuth } from './firebaseConfig';
+// Firebaseの初期化関数とインスタンスのインポートはここから削除し、
+// RubiksCubeコンポーネント内で遅延ロードするように変更します。
+// import { initializeFirebaseAndAuth } from './firebaseConfig'; // この行は削除
+
+// RubiksCubeコンポーネントを遅延ロード (lazy loading) するように設定
+// このコンポーネントがレンダリングされるときに初めて、関連するコードが読み込まれます。
+const RubiksCube = lazy(() => import("./features/rubiks-cube/components/RubiksCube"));
 
 // ナビゲーションバーコンポーネント
 const NavBar = () => {
@@ -81,39 +85,37 @@ const NavBar = () => {
 
 // アプリケーションのメインコンポーネント
 function App() {
-  // Firebaseの初期化と認証が完了したかどうかの状態
-  const [firebaseAuthReady, setFirebaseAuthReady] = useState(false);
-  // 認証されたユーザーIDを保持（デバッグや将来的な機能拡張用）
-  const [currentUserId, setCurrentUserId] = useState(null);
+  // Firebaseの初期化と認証に関連するstateはここから削除します。
+  // const [firebaseAuthReady, setFirebaseAuthReady] = useState(false);
+  // const [currentUserId, setCurrentUserId] = useState(null);
 
-  // Firebaseの初期化と認証をコンポーネントマウント時に一度だけ実行
-  useEffect(() => {
-    async function initFirebase() {
-      try {
-        const { userId } = await initializeFirebaseAndAuth();
-        setCurrentUserId(userId); // 認証されたユーザーIDをstateにセット
-        setFirebaseAuthReady(true); // Firebase認証が完了したことをマーク
-      } catch (error) {
-        console.error("Firebase: Initialization failed in App.js:", error);
-        // エラーが発生した場合も、アプリケーションを続行できるようにする
-        // ただし、Firebaseに依存する機能は正しく動作しない可能性があります。
-        setFirebaseAuthReady(false); 
-      }
-    }
-    initFirebase();
-  }, []); // 空の依存配列により、コンポーネントマウント時に一度だけ実行
+  // useEffect(() => {
+  //   async function initFirebase() {
+  //     try {
+  //       const { userId } = await initializeFirebaseAndAuth();
+  //       setCurrentUserId(userId);
+  //       setFirebaseAuthReady(true);
+  //     } catch (error) {
+  //       console.error("Firebase: Initialization failed in App.js:", error);
+  //       setFirebaseAuthReady(false); 
+  //     }
+  //   }
+  //   initFirebase();
+  // }, []);
 
-  // Firebase認証がまだ完了していない場合はローディング表示
-  if (!firebaseAuthReady) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div> {/* スピナー要素 */}
-        <p>読み込み中...</p>
-      </div>
-    );
-  }
+  // Firebase認証のローディング表示はここから削除し、
+  // RubiksCubeコンポーネントのSuspense fallbackで表示するようにします。
+  // if (!firebaseAuthReady) {
+  //   return (
+  //     <div className="loading-container">
+  //       <div className="spinner"></div>
+  //       <p>読み込み中...</p>
+  //     </div>
+  //   );
+  // }
 
   // Firebase認証が完了したら、ルーターとアプリケーションコンテンツをレンダリング
+  // RubiksCubeがロードされるまで表示されるフォールバックUIをSuspenseで定義
   return (
     // BrowserRouterを使用してルーティングを管理
     // basename="/Sakamichi" で、GitHub Pages のサブディレクトリパスをベースとして設定
@@ -126,7 +128,20 @@ function App() {
         <Route path="/" element={<Home />} /> {/* ルートパスのコンポーネント */}
         <Route path="/members" element={<MemberListByYear />} /> {/* /membersパスのコンポーネント */}
         <Route path="/transition" element={<MemberTransition />} /> {/* /transitionパスのコンポーネント */}
-        <Route path="/cube" element={<RubiksCube />} /> {/* /cubeパスのコンポーネント */}
+        <Route 
+          path="/cube" 
+          element={
+            // RubiksCubeがロードされるまで表示されるローディングUI
+            <Suspense fallback={
+              <div className="loading-container">
+                <div className="spinner"></div>
+                <p>Loading...</p>
+              </div>
+            }>
+              <RubiksCube />
+            </Suspense>
+          } 
+        />
       </Routes>
     </BrowserRouter>
   );

@@ -3,15 +3,15 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import Papa from "papaparse";
 
-// 新しく作成したスコア管理コンポーネントをインポート
-import LeaderboardAndScoreSave from "./LeaderboardAndScoreSave";
+// Firebase imports moved here
+import { initializeFirebaseAndAuth, db as globalDb, auth as globalAuth, appId as globalAppId } from '../../../firebaseConfig';
 
 // コンポーネント
 import Cubelet from "../utils/Cubelet";
 import RotatingGroup from "../utils/RotatingGroup";
 import AxesArrows from "../utils/AxesArrows";
 import DebugPanel from "./DebugPanel";
-// MemberCard は LeaderboardAndScoreSave 内で使用されるため、ここではインポート不要
+import LeaderboardAndScoreSave from "./LeaderboardAndScoreSave"; // No direct import of db, auth, appId here anymore
 
 // カスタムフック
 import { useCubeState } from "../hooks/useCubeState";
@@ -52,6 +52,32 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
   const [groupData, setGroupData] = useState([]); // グループCSVデータを保持するstate
   const [links, setLinks] = useState([]); // リンク情報を保持するstate
   const [selectedMember, setSelectedMember] = useState(null); // 選択されたメンバーを記憶するstate
+
+  // Firebase関連のstateをRubiksCube内に移動
+  const [firebaseAuthReady, setFirebaseAuthReady] = useState(false);
+  const [dbInstance, setDbInstance] = useState(null);
+  const [authInstance, setAuthInstance] = useState(null);
+  const [appIdInstance, setAppIdInstance] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null); // 認証されたユーザーIDを保持
+
+  // RubiksCubeがマウントされたときにFirebaseを初期化
+  useEffect(() => {
+    async function initFirebaseForCube() {
+      try {
+        const { db, auth, userId } = await initializeFirebaseAndAuth(); // initializeFirebaseAndAuthを実行してインスタンスを取得
+        setDbInstance(db);
+        setAuthInstance(auth);
+        setAppIdInstance(globalAppId); // firebaseConfigからエクスポートされたappIdを使用
+        setCurrentUserId(userId);
+        setFirebaseAuthReady(true);
+        console.log("Firebase initialized successfully for RubiksCube.");
+      } catch (error) {
+        console.error("Firebase: Initialization failed in RubiksCube.jsx:", error);
+        setFirebaseAuthReady(false);
+      }
+    }
+    initFirebaseForCube();
+  }, []); // コンポーネントマウント時に一度だけ実行
 
   // グループCSVデータとリンク情報を読み込むuseEffect
   useEffect(() => {
@@ -251,6 +277,15 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     setSelectedMember(null); // 選択されたメンバーをリセット
   };
 
+  // Firebaseが初期化されるまでローディング表示
+  if (!firebaseAuthReady) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="rubiks-cube-container" // コンテナにクラスを適用
@@ -298,6 +333,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
       {/* LeaderboardAndScoreSaveコンポーネントをレンダリング */}
       {/* isCleared, time, difficulty, selectedMember, groupData, links をPropsとして渡す */}
       {/* onRetryを渡して、LeaderboardAndScoreSaveからリトライをトリガーできるようにする */}
+      {/* LeaderboardAndScoreSaveコンポーネントをレンダリング。Firebaseインスタンスを渡す */}
       <LeaderboardAndScoreSave 
         isCleared={isCleared}
         time={time}
@@ -305,7 +341,11 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
         selectedMember={selectedMember}
         groupData={groupData}
         links={links}
-        onRetry={handleRetry} // RubiksCubeのhandleRetry関数をLeaderboardAndScoreSaveに渡す
+        onRetry={handleRetry}
+        // ここでFirebaseインスタンスをPropsとして渡します
+        db={dbInstance} 
+        auth={authInstance}
+        appId={appIdInstance} 
       />
 
       {/* ゲーム開始用ボタン、難易度選択パネル */}
