@@ -95,8 +95,7 @@ const Home = () => {
         <div className="home-intro-card">
           <h1 className="home-title">坂道グループ情報サイト</h1>
           <p className="home-description">
-            坂道グループの現役メンバー・元メンバーの情報をまとめました。<br />
-            上部メニューから各機能ページへ移動できます。
+            坂道ファンが趣味で作りました<br />
           </p>
           {/* 免責事項の追加 */}
           <p className="home-disclaimer">
