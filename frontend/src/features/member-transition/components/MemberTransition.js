@@ -37,6 +37,7 @@ const MemberTransition = ({ setModalOpen }) => {
     let addMembers = [];
     let startList = [];
     let groupPeriodList = [];
+    let discographyList = []; // ★追加: ディスコグラフィーデータ用リスト★
 
     // CSVファイルの読み込みとデータ結合
     Papa.parse(csvBase + "sakamichi_combined.csv", {
@@ -60,63 +61,109 @@ const MemberTransition = ({ setModalOpen }) => {
                   complete: (groupResult) => {
                     groupPeriodList = groupResult.data;
                     setGroupPeriods(groupPeriodList);
+                    // ★追加: sakamichi_combined_discography.csv の読み込み★
+                    Papa.parse(csvBase + "sakamichi_combined_discography.csv", {
+                      download: true,
+                      header: true,
+                      complete: (discographyResult) => {
+                        discographyList = discographyResult.data;
 
-                    // 加入期上書きロジック
-                    const addMap = {};
-                    addMembers.forEach((row) => {
-                      addMap[`${row.グループ名}_${row.名前}`] = row.加入期;
-                    });
-                    const merged = baseMembers.map((m) => {
-                      const key = `${m.グループ名}_${m.名前}`;
-                      return addMap[key]
-                        ? { ...m, 加入期: addMap[key] }
-                        : m;
-                    });
+                        // 加入期上書きロジック
+                        const addMap = {};
+                        addMembers.forEach((row) => {
+                          addMap[`${row.グループ名}_${row.名前}`] = row.加入期;
+                        });
+                        const merged = baseMembers.map((m) => {
+                          const key = `${m.グループ名}_${m.名前}`;
+                          return addMap[key]
+                            ? { ...m, 加入期: addMap[key] }
+                            : m;
+                        });
 
-                    setMembers(merged);
-                    setStartDates(startList);
+                        setMembers(merged);
+                        setStartDates(startList);
 
-                    // 年表情報の生成とグループ名上書き
-                    const eventMap = {};
-                    startList.forEach((row) => {
-                      const dateStr = row.加入記念日;
-                      eventMap[dateStr] = {
-                        group: row.グループ名,
-                        period: row.加入期,
-                        date: parseDate(dateStr),
-                      };
-                    });
+                        // 年表情報の生成とグループ名上書き
+                        const eventMap = {};
+                        startList.forEach((row) => {
+                          const dateStr = row.加入記念日;
+                          // parseDateの結果がnullでないことを確認
+                          const parsedDate = parseDate(dateStr);
+                          if (parsedDate) {
+                              eventMap[dateStr] = {
+                                  group: row.グループ名,
+                                  period: row.加入期,
+                                  date: parsedDate,
+                                  type: "member_join", // イベントタイプを追加
+                              };
+                          }
+                        });
 
-                    Object.entries(eventMap).forEach(([dateStr, val]) => {
-                      const eventDate = val.date;
-                      groupPeriodList.forEach((period) => {
-                        const start = parseDate(period.開始日);
-                        const end = parseDate(period.終了日);
-                        if (
-                          period.旧グループ名 &&
-                          period.グループ名 === val.group &&
-                          start &&
-                          end &&
-                          eventDate >= start &&
-                          eventDate <= end
-                        ) {
-                          val.group = period.旧グループ名;
-                        }
-                      });
-                    });
+                        // ★追加: ディスコグラフィー情報をイベントマップに追加★
+                        discographyList.forEach((row) => {
+                            const dateStr = row.リリース日;
+                            const parsedDate = parseDate(dateStr);
+                            if (parsedDate) {
+                                // 一時的なグループ名としてrow.グループ名を使用し、後で変換ロジックを適用
+                                eventMap[`${dateStr}_${row.タイトル}`] = { // タイトルもキーに含めてユニークに
+                                    group: row.グループ名,
+                                    date: parsedDate,
+                                    title: row.タイトル,
+                                    type: "discography_release", // イベントタイプを追加
+                                };
+                            }
+                        });
 
-                    const eventList = Object.values(eventMap)
-                      .filter((e) => e.date)
-                      .map((e) => ({
-                        date: e.date,
-                        label: `${e.group} ${e.period}加入`,
-                        group: e.group,
-                        period: e.period,
-                      }))
-                      .sort((a, b) => a.date - b.date);
 
-                    setEvents(eventList);
-                    setLoading(false);
+                        Object.entries(eventMap).forEach(([dateStrOrKey, val]) => {
+                          const eventDate = val.date;
+                          // グループ名の変換ロジック
+                          groupPeriodList.forEach((period) => {
+                            const start = parseDate(period.開始日);
+                            const end = parseDate(period.終了日);
+                            if (
+                              period.旧グループ名 &&
+                              period.グループ名 === val.group &&
+                              start &&
+                              end &&
+                              eventDate >= start &&
+                              eventDate <= end
+                            ) {
+                              val.group = period.旧グループ名;
+                            }
+                          });
+                        });
+
+                        const eventList = Object.values(eventMap)
+                          .filter((e) => e.date)
+                          .map((e) => {
+                            // イベントタイプに応じてlabelを生成
+                            if (e.type === "member_join") {
+                                return {
+                                    date: e.date,
+                                    label: `${e.group} ${e.period}加入`,
+                                    group: e.group,
+                                    period: e.period,
+                                    type: e.type,
+                                };
+                            } else if (e.type === "discography_release") {
+                                return {
+                                    date: e.date,
+                                    label: `${e.group} 『${e.title}』リリース`, // ★ここを修正★
+                                    group: e.group,
+                                    title: e.title,
+                                    type: e.type,
+                                };
+                            }
+                            return null; // 未知のタイプはスキップ
+                          })
+                          .filter(Boolean) // nullを除去
+                          .sort((a, b) => a.date - b.date);
+
+                        setEvents(eventList);
+                        setLoading(false);
+                      }, // ★ディスコグラフィーCSV読み込みのcompleteコールバックの終わり★
+                    }); // ★ディスコグラフィーCSV読み込みの終わり★
                   },
                 });
               },
@@ -131,7 +178,7 @@ const MemberTransition = ({ setModalOpen }) => {
   useEffect(() => {
     if (selectedEvent && events.length > 0) {
       const index = events.findIndex(
-        (e) => e.date.toISOString() === selectedEvent.date.toISOString()
+        (e) => e.date.toISOString() === selectedEvent.date.toISOString() && e.label === selectedEvent.label // labelも比較して正確なイベントを特定
       );
       if (index !== -1) {
         setSelectedEventIndex(index);
@@ -190,6 +237,11 @@ const MemberTransition = ({ setModalOpen }) => {
 
   // currentEvent は、選択されたイベント（モーダル表示用）または最初のイベントを初期値として設定
   const currentEvent = selectedEvent || events[0];
+  // currentEventがnullの場合の安全策
+  if (!currentEvent) {
+    return <Layout><div>データを読み込めませんでした。</div></Layout>;
+  }
+
   const activeByGroupAndPeriod = getActiveMembersByGroupAndPeriod(currentEvent.date);
 
   // 表示するグループ順
@@ -236,7 +288,7 @@ const MemberTransition = ({ setModalOpen }) => {
           <div className="timeline-items-wrapper">
             {events.map((item, i) => (
               <div
-                key={item.date.toISOString()}
+                key={`${item.date.toISOString()}-${item.label}`}
                 ref={el => (itemRefs.current[i] = el)}
                 style={{
                   padding: "32px 0",
@@ -244,7 +296,7 @@ const MemberTransition = ({ setModalOpen }) => {
                   marginLeft: 30,
                   position: "relative",
                   // 選択された項目を強調表示するスタイルは維持
-                  background: selectedEvent && selectedEvent.date.toISOString() === item.date.toISOString() ? "#f5f0fa" : "transparent",
+                  background: selectedEvent && selectedEvent.date.toISOString() === item.date.toISOString() && selectedEvent.label === item.label ? "#f5f0fa" : "transparent",
                   transition: "background 0.2s",
                   minHeight: 56,
                   display: "flex",
@@ -351,6 +403,8 @@ const MemberTransition = ({ setModalOpen }) => {
                 overflowY: "auto",
               }}
             >
+              {/* ★ここから修正★ */}
+              {/* イベントタイプに関わらず、メンバー構成を表示する */}
               <div style={{
                 display: "flex",
                 gap: "16px",
