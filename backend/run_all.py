@@ -30,10 +30,14 @@ def run_script(script_name):
         sys.exit(1)
 
 if __name__ == "__main__":
-    print("--- Running extract.py ---")
-    run_script("extract.py")
+    scripts = [
+        "extract.py",
+        "combine_member_tables.py",
+        "combine_discography_tables.py",
+    ]
 
-    print("\n--- Running combine.py ---")
-    run_script("combine.py")
+    for script in scripts:
+        print(f"\n--- Running {script} ---")
+        run_script(script)
 
     print("\n--- All Python scripts executed successfully. ---")

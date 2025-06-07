@@ -3,9 +3,13 @@ import glob
 import re
 import os
 
+# スクリプトの現在のディレクトリを取得し、そこに移動
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(CURRENT_DIR)
+
 # 処理対象のCSVファイルを取得
 # run_all.pyによってbackendディレクトリがcwdになるので、"tables/*.csv"でOK
-csv_files = glob.glob("tables/*.csv")
+csv_files = glob.glob("tables/member/*.csv")
 
 # 結合用のリスト (変更なし)
 processed_data = []
