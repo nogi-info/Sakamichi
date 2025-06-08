@@ -50,6 +50,16 @@ const MemberTransition = ({ setModalOpen }) => {
     }));
   };
 
+  // periodごとの開始日を取得する関数
+  const getPeriodStartDate = (group, period) => {
+    const row = startDates.find(
+      (row) =>
+        row.グループ名 === group &&
+        (row.加入期 || "").replace("生", "") === period.replace("生", "")
+    );
+    return row ? parseDate(row.加入記念日) : new Date(0); // 見つからなければ最小値
+  };
+
   useEffect(() => {
     let baseMembers = [];
     let addMembers = [];
@@ -103,65 +113,72 @@ const MemberTransition = ({ setModalOpen }) => {
                           const dateStr = row.加入記念日;
                           const parsedDate = parseDate(dateStr);
                           if (parsedDate) {
-                              eventMap[dateStr] = {
-                                  group: row.グループ名,
-                                  period: row.加入期,
-                                  date: parsedDate,
-                                  type: "member_join",
-                              };
+                            if (!eventMap[dateStr]) eventMap[dateStr] = [];
+                            eventMap[dateStr].push({
+                              group: row.グループ名,
+                              period: row.加入期,
+                              date: parsedDate,
+                              type: "member_join",
+                            });
                           }
                         });
 
                         discographyList.forEach((row) => {
-                            const dateStr = row.リリース日;
-                            const parsedDate = parseDate(dateStr);
-                            if (parsedDate) {
-                                eventMap[`${dateStr}_${row.タイトル}`] = {
-                                    group: row.グループ名,
-                                    date: parsedDate,
-                                    title: row.タイトル,
-                                    type: "discography_release",
-                                };
-                            }
+                          const dateStr = row.リリース日;
+                          const parsedDate = parseDate(dateStr);
+                          if (parsedDate) {
+                            if (!eventMap[dateStr]) eventMap[dateStr] = [];
+                            eventMap[dateStr].push({
+                              group: row.グループ名,
+                              date: parsedDate,
+                              title: row.タイトル,
+                              type: "discography_release",
+                            });
+                          }
                         });
 
-                        Object.entries(eventMap).forEach(([dateStrOrKey, val]) => {
-                          const eventDate = val.date;
-                          groupPeriodList.forEach((period) => {
-                            const start = parseDate(period.開始日);
-                            const end = parseDate(period.終了日);
-                            if (
-                              period.旧グループ名 &&
-                              period.グループ名 === val.group &&
-                              start &&
-                              end &&
-                              eventDate >= start &&
-                              eventDate <= end
-                            ) {
-                              val.group = period.旧グループ名;
-                            }
+                        // グループ名の変換処理も配列に対応
+                        Object.entries(eventMap).forEach(([dateStr, events]) => {
+                          events.forEach((val) => {
+                            const eventDate = val.date;
+                            groupPeriodList.forEach((period) => {
+                              const start = parseDate(period.開始日);
+                              const end = parseDate(period.終了日);
+                              if (
+                                period.旧グループ名 &&
+                                period.グループ名 === val.group &&
+                                start &&
+                                end &&
+                                eventDate >= start &&
+                                eventDate <= end
+                              ) {
+                                val.group = period.旧グループ名;
+                              }
+                            });
                           });
                         });
 
+                        // eventListを配列で展開
                         const eventList = Object.values(eventMap)
+                          .flat()
                           .filter((e) => e.date)
                           .map((e) => {
                             if (e.type === "member_join") {
-                                return {
-                                    date: e.date,
-                                    label: `${e.group} ${e.period}加入`,
-                                    group: e.group,
-                                    period: e.period,
-                                    type: e.type,
-                                };
+                              return {
+                                date: e.date,
+                                label: `${e.period}加入`,
+                                group: e.group,
+                                period: e.period,
+                                type: e.type,
+                              };
                             } else if (e.type === "discography_release") {
-                                return {
-                                    date: e.date,
-                                    label: `${e.group} 『${e.title}』リリース`,
-                                    group: e.group,
-                                    title: e.title,
-                                    type: e.type,
-                                };
+                              return {
+                                date: e.date,
+                                label: `『${e.title}』`,
+                                group: e.group,
+                                title: e.title,
+                                type: e.type,
+                              };
                             }
                             return null;
                           })
@@ -251,13 +268,6 @@ const MemberTransition = ({ setModalOpen }) => {
     return <Layout><div>読み込み中...</div></Layout>;
   }
 
-  const currentEvent = selectedEvent || filteredEvents[0];
-  if (!currentEvent) {
-    return <Layout><div>データを読み込めませんでした。</div></Layout>;
-  }
-
-  const activeByGroupAndPeriod = getActiveMembersByGroupAndPeriod(currentEvent.date);
-
   const displayGroups = ["乃木坂46", "欅坂46", "櫻坂46", "けやき坂46", "日向坂46"];
 
   const handleTimelineItemClick = (item) => {
@@ -343,8 +353,11 @@ const MemberTransition = ({ setModalOpen }) => {
               <div
                 key={`${item.date.toISOString()}-${item.label}`}
                 ref={el => (itemRefs.current[i] = el)}
+                className="timeline-item-row"
+                tabIndex={0}
+                onClick={() => handleTimelineItemClick(item)}
                 style={{
-                  padding: "32px 0",
+                  padding: "10px",
                   borderLeft: "4px solid #ccc",
                   marginLeft: 30,
                   position: "relative",
@@ -352,44 +365,92 @@ const MemberTransition = ({ setModalOpen }) => {
                   transition: "background 0.2s",
                   minHeight: 56,
                   display: "flex",
+                  flexDirection: "row",
+                  flexWrap: "wrap",
                   alignItems: "center",
                   cursor: "pointer",
                   zIndex: 2,
                 }}
-                tabIndex={0}
-                onClick={() => handleTimelineItemClick(item)}
               >
-                <div
-                  style={{
-                    minWidth: 90,
-                    position: "relative",
-                    left: -30,
-                    background: "#fff",
-                    color: groupColors[item.group] || "#812990",
-                    fontWeight: "bold",
-                    borderRadius: "8px",
-                    padding: "4px 12px",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                    fontSize: "1.1em",
-                    marginRight: 12,
-                    textAlign: "right",
-                    zIndex: 2,
-                    pointerEvents: "auto"
-                  }}
-                >
+                <div className="timeline-item-date" style={{
+                  minWidth: 90,
+                  marginLeft: 16,
+                  color: groupColors[item.group] || "#812990",
+                  fontWeight: "bold",
+                  fontSize: "1.1em",
+                  textAlign: "right",
+                }}>
                   {item.date.toLocaleDateString()}
                 </div>
                 <div
+                  className="timeline-item-group-frame"
                   style={{
-                    marginLeft: 8,
-                    fontSize: "1.1em",
+                    border: `2px solid ${groupColors[item.group] || "#812990"}`,
+                    borderRadius: "12px",
+                    background: "#fff",
+                    padding: "16px 20px",
+                    minWidth: 180,
+                    maxWidth: 340,
+                    margin: "0 auto",
+                    position: "relative",
                     flex: 1,
-                    wordBreak: "keep-all",
-                    zIndex: 1,
-                    pointerEvents: "auto"
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
                   }}
                 >
-                  {item.label}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "row",
+                      position: "absolute",
+                      top: 8,
+                      left: 12,
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: "#fff",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        fontSize: "1.0em",
+                        marginRight: 12,
+                      }}
+                    >
+                      {item.type === "member_join" ? "👤 " : "🎵 "}
+                    </div>
+                    <div
+                      className="timeline-item-group-label"
+                      style={{
+                        display: "flex",
+                        position: "relative",
+                        color: groupColors[item.group] || "#812990",
+                        fontWeight: "bold",
+                        fontSize: "0.98em",
+                        background: "#f7f6fa",
+                        borderRadius: "6px",
+                        padding: "2px 10px",
+                        alignItems: "center",
+                        zIndex: 2,
+                      }}
+                    >
+                      {item.group}
+                    </div>
+                  </div>
+                  <div
+                    className="timeline-item-label-content"
+                    style={{
+                      marginTop: 24,
+                      marginBottom: 8,
+                      fontSize: "1.1em",
+                      fontWeight: "bold",
+                      textAlign: "center",
+                    }}
+                  >
+                    {item.label}
+                  </div>
                 </div>
               </div>
             ))}
@@ -482,7 +543,13 @@ const MemberTransition = ({ setModalOpen }) => {
                         {group}（{Object.values(getActiveMembersByGroupAndPeriod(selectedEvent.date)[group])
                           .reduce((sum, names) => sum + names.length, 0)}人）
                       </div>
-                      {Object.entries(getActiveMembersByGroupAndPeriod(selectedEvent.date)[group]).map(([period, names]) => (
+                      {/* periodでソート */}
+                      {Object.entries(getActiveMembersByGroupAndPeriod(selectedEvent.date)[group]).sort(([a], [b]) => {
+                        const dateA = getPeriodStartDate(group, a);
+                        const dateB = getPeriodStartDate(group, b);
+                        return dateA - dateB;
+                      })
+                      .map(([period, names]) => (
                         <div
                           key={period}
                           style={{
