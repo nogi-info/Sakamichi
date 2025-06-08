@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-do
 import Home from "./features/home/components/Home"; // ホームページのコンポーネントをインポート
 import MemberListByYear from "./features/member-list/components/MemberListByYear"; // 生年月日順ソートページのコンポーネントをインポート
 import MemberTransition from "./features/member-transition/components/MemberTransition"; // メンバー構成の遷移ページのコンポーネントをインポート
+import TVInfo from "./features/tv-info/components/TVInfo"; // TV出演情報ページのコンポーネントをインポート
 import './App.css'; // アプリケーション全体のスタイルシートをインポート
 
 // Firebaseの初期化関数とインスタンスのインポートはここから削除し、
@@ -24,6 +25,7 @@ const NavBar = () => {
     { to: "/", label: "ホーム" },
     { to: "/members", label: "生年月日順ソート" },
     { to: "/transition", label: "メンバー構成の遷移" },
+    { to: "/tv-info", label: "TV出演情報" },
     { to: "/cube", label: "Cube" },
   ];
 
@@ -136,6 +138,9 @@ function App() {
         <Route path="/members" element={<MemberListByYear />} /> {/* /membersパスのコンポーネント */}
         {/* MemberTransitionにsetIsModalOpen関数を渡す */}
         <Route path="/transition" element={<MemberTransition setModalOpen={setIsModalOpen} />} /> {/* /transitionパスのコンポーネント */}
+        <Route path="/tv-info" element={<TVInfo />} /> {/* TV出演情報ページのコンポーネント */}
+        {/* RubiksCubeコンポーネントを遅延ロード */}
+        {/* RubiksCubeがロードされるまで表示されるローディングUIをSuspenseで定義 */}
         <Route
           path="/cube"
           element={

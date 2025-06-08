@@ -55,9 +55,9 @@ code {
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  padding: 12px 0;
+  padding: 12px;
   margin: 0 auto;
-  max-width: 700px; /* ナビゲーションバーの最大幅 */
+  width: fit-content; /* コンテンツの幅に合わせる */
   position: relative; /* モバイルメニューの絶対配置の基準 */
   min-height: 48px; /* タッチターゲットの推奨サイズ */
   /* hide-nav クラスは app-header-custom で制御するため削除 */
@@ -196,6 +196,7 @@ code {
     justify-content: space-between; /* タイトルとハンバーガーアイコンを左右に配置 */
     padding: 12px 15px; /* 左右のパディングを調整 */
     max-width: 100%; /* 全幅を使用 */
+    width: auto;
   }
 
   .current-page-title-mobile {
