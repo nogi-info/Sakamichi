@@ -1,42 +1,27 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import Papa from "papaparse";
-
-// Firebase imports moved here
 import { initializeFirebaseAndAuth, db as globalDb, auth as globalAuth, appId as globalAppId } from '../../../firebaseConfig';
-
-// コンポーネント
 import Cubelet from "../utils/Cubelet";
 import RotatingGroup from "../utils/RotatingGroup";
 import AxesArrows from "../utils/AxesArrows";
 import DebugPanel from "./DebugPanel";
-import LeaderboardAndScoreSave from "./LeaderboardAndScoreSave"; // BestTimesDisplayのimportは不要に
-
-// カスタムフック
+import LeaderboardAndScoreSave from "./LeaderboardAndScoreSave";
 import { useCubeState } from "../hooks/useCubeState";
 import { useDragRotation } from "../hooks/useDragRotation";
 import { useCameraControls } from "../hooks/useCameraControls";
 import { useStopwatch } from "../hooks/useStopwatch";
-
-// スタイル
 import './RubiksCube.css';
+import { useSakamichiMasterDataContext } from "../../common/SakamichiMasterDataContext";
 
-// CSVファイルへのパス
-const CSV_FILE_PATH = "/Sakamichi/data/sakamichi_combined.csv";
-const GROUP_CSV_FILE_PATH = "/Sakamichi/data/sakamichi_group.csv";
-const LINKS_CSV_FILE_PATH = "/Sakamichi/data/sakamichi_link.csv"; // リンクCSVのパスを追加
-
-// 時間表示のヘルパー関数 (LeaderboardAndScoreSave.jsx に移動済み)
+// 時間表示のヘルパー関数
 const formatTime = (totalSeconds) => {
   const minutes = Math.floor(totalSeconds / 60);
   const remainingSeconds = totalSeconds % 60;
-
   let formattedSecondsString = remainingSeconds.toFixed(2);
   const parts = formattedSecondsString.split('.');
   const integerPart = parts[0];
   const decimalPart = parts[1] || '00';
-
   if (minutes === 0) {
     return `${integerPart}秒${decimalPart}`;
   } else {
@@ -45,31 +30,48 @@ const formatTime = (totalSeconds) => {
   }
 };
 
-
 function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
-  const [faceKanji, setFaceKanji] = useState(initialFaceKanji); 
-  const [difficulty, setDifficulty] = useState(2); // 初期値をLevel 2に設定
-  const [groupData, setGroupData] = useState([]); // グループCSVデータを保持するstate
-  const [links, setLinks] = useState([]); // リンク情報を保持するstate
-  const [selectedMember, setSelectedMember] = useState(null); // 選択されたメンバーを記憶するstate
-  const [showLeaderboard, setShowLeaderboard] = useState(false); // ベストタイム表の表示状態を追加
+  // マスターデータをContextから取得
+  const { data, loading, error } = useSakamichiMasterDataContext();
 
-  // Firebase関連のstateをRubiksCube内に移動
+  const [faceKanji, setFaceKanji] = useState(initialFaceKanji); 
+  const [difficulty, setDifficulty] = useState(2);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  // Firebase関連のstate
   const [firebaseAuthReady, setFirebaseAuthReady] = useState(false);
   const [dbInstance, setDbInstance] = useState(null);
   const [authInstance, setAuthInstance] = useState(null);
   const [appIdInstance, setAppIdInstance] = useState(null);
-  const [currentUserId, setCurrentUserId] = useState(null); // 認証されたユーザーIDを保持
-  // leaderboardTimesForDisplay, highlightedScoreId, latestUserScoreAfterGame はLeaderboardAndScoreSaveが管理するため削除
+  const [currentUserId, setCurrentUserId] = useState(null);
 
-  // RubiksCubeがマウントされたときにFirebaseを初期化
+  // デバッグ・UI関連
+  const [showDebug, setShowDebug] = useState(false);
+  const [showAxes, setShowAxes] = useState(false);
+  const [debugInfo, setDebugInfo] = useState({});
+
+  // マスターデータからグループ情報・リンク情報を取得
+  const groupData = useMemo(() => (data && data.groupMap)
+    ? Object.entries(data.groupMap).flatMap(([group, arr]) =>
+        arr.map(period => ({
+          グループ名: group,
+          旧グループ名: period.旧グループ名,
+          開始日: period.開始日,
+          終了日: period.終了日
+        }))
+      )
+    : [], [data]);
+  const links = useMemo(() => (data && data.members) ? data.members : [], [data]);
+
+  // Firebase初期化
   useEffect(() => {
     async function initFirebaseForCube() {
       try {
-        const { db, auth, userId } = await initializeFirebaseAndAuth(); // initializeFirebaseAndAuthを実行してインスタンスを取得
+        const { db, auth, userId } = await initializeFirebaseAndAuth();
         setDbInstance(db);
         setAuthInstance(auth);
-        setAppIdInstance(globalAppId); // firebaseConfigからエクスポートされたappIdを使用
+        setAppIdInstance(globalAppId);
         setCurrentUserId(userId);
         setFirebaseAuthReady(true);
         console.log("Firebase initialized successfully for RubiksCube.");
@@ -79,126 +81,41 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
       }
     }
     initFirebaseForCube();
-  }, []); // コンポーネントマウント時に一度だけ実行
+  }, []);
 
-  // ベストタイム (上位20件) をFirestoreからリアルタイムで読み込むuseEffect (RubiksCube内で管理) は削除
-  // LeaderboardAndScoreSaveが全てのリーダーボードデータフェッチを管理するため
-
-  // グループCSVデータとリンク情報を読み込むuseEffect
-  useEffect(() => {
-    // グループCSVデータを読み込む
-    const loadGroupData = async () => {
-      try {
-        const response = await fetch(GROUP_CSV_FILE_PATH);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const csvText = await response.text();
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (results) => {
-            setGroupData(results.data);
-          },
-          error: (err) => {
-            console.error("PapaParse error loading group data:", err);
-          }
-        });
-      } catch (error) {
-        console.error("Error loading group data:", error);
-      }
-    };
-
-    // リンク情報を読み込む
-    const loadLinksData = async () => {
-      try {
-        const response = await fetch(LINKS_CSV_FILE_PATH); // 正しいパスを使用
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const csvText = await response.text();
-        Papa.parse(csvText, {
-          download: false, // fetchで取得済みなのでdownloadは不要
-          header: true,
-          complete: (result) => {
-            setLinks(result.data);
-          },
-          error: (err) => {
-            console.error("PapaParse error loading links data:", err);
-          },
-        });
-      } catch (error) {
-        console.error("Error loading links data:", error);
-      }
-    };
-
-    loadGroupData();
-    loadLinksData();
-  }, []); // コンポーネントマウント時に一度だけ実行
-
+  // メンバーからランダムにfaceKanjiを生成
   const loadAndSetRandomFaceKanji = async () => {
-    try {
-      const response = await fetch(CSV_FILE_PATH);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const csvText = await response.text();
-      
-      Papa.parse(csvText, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          const dataRows = results.data;
-
-          if (dataRows.length === 0) {
-            console.warn("CSVファイルにデータ行がありません。");
-            setFaceKanji(initialFaceKanji);
-            setSelectedMember(null); // メンバーがいない場合はリセット
-            return;
-          }
-
-          const randomIndex = Math.floor(Math.random() * dataRows.length);
-          const selectedRow = dataRows[randomIndex];
-          
-          let groupName = selectedRow['グループ名'] ? selectedRow['グループ名'].trim() : '';
-          const name = selectedRow['名前'] ? selectedRow['名前'].trim() : '';
-
-          // sakamichi_group.csvからグループ情報を検索し、置換判定
-          const today = new Date(); // 現在の日付
-          const gradDateStr = selectedRow['卒業・辞退・契約終了日'] ? selectedRow['卒業・辞退・契約終了日'].trim() : '-';
-          const gradDate = gradDateStr === '-' ? today : new Date(gradDateStr); // ハイフンの場合はそのまま、日付形式に変換
-          const matchingGroup = groupData.find(group => group['グループ名'] === groupName);
-
-          if (matchingGroup) {
-            // 現在の日付が期間内にあるか判定
-            if (gradDate >= new Date(matchingGroup['開始日']) && gradDate <= new Date(matchingGroup['終了日'])) {
-              groupName = matchingGroup['旧グループ名']; // 旧グループ名に置換
-            }
-          }
-
-          const combinedString = name + groupName; // 置換後のグループ名を使用
-          const newFaceKanji = combinedString.substring(0, 6);
-
-          setFaceKanji(newFaceKanji || initialFaceKanji);
-          setSelectedMember(selectedRow); // 選択されたメンバーを記憶
-        },
-        error: (err) => {
-          console.error("PapaParseエラー:", err);
-          setFaceKanji(initialFaceKanji);
-          setSelectedMember(null); // エラー時はリセット
-        }
-      });
-
-    } catch (error) {
-      console.error("CSVファイルの読み込みまたはパース中にエラーが発生しました:", error);
+    if (!links.length) {
       setFaceKanji(initialFaceKanji);
-      setSelectedMember(null); // エラー時はリセット
+      setSelectedMember(null);
+      return;
     }
-  };
+    const dataRows = links;
+    const randomIndex = Math.floor(Math.random() * dataRows.length);
+    const selectedRow = dataRows[randomIndex];
 
-  const [showDebug, setShowDebug] = useState(false);
-  const [showAxes, setShowAxes] = useState(false);
-  const [debugInfo, setDebugInfo] = useState({});
+    let groupName = selectedRow['グループ名'] ? selectedRow['グループ名'].trim() : '';
+    const name = selectedRow['名前'] ? selectedRow['名前'].trim() : '';
+
+    // グループ名置換判定
+    const today = new Date();
+    const gradDateStr = selectedRow['卒業・辞退・契約終了日'] ? selectedRow['卒業・辞退・契約終了日'].trim() : '-';
+    const gradDate = gradDateStr === '-' ? today : new Date(gradDateStr);
+    const matchingGroup = groupData.find(group =>
+      group['グループ名'] === groupName &&
+      gradDate >= new Date(group['開始日']) &&
+      gradDate <= new Date(group['終了日'])
+    );
+    if (matchingGroup) {
+      groupName = matchingGroup['旧グループ名'];
+    }
+
+    const combinedString = name + groupName;
+    const newFaceKanji = combinedString.substring(0, 6);
+
+    setFaceKanji(newFaceKanji || initialFaceKanji);
+    setSelectedMember(selectedRow);
+  };
 
   const { time, startStopwatch, stopStopwatch, resetStopwatch } = useStopwatch();
 
@@ -215,7 +132,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     setRotationAngle,
     rotationLayer,
     setRotationLayer,
-    isCleared, // isClearedの状態を使用
+    isCleared,
     faceTextures,
     staticCubelets,
     resetCube,
@@ -225,7 +142,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
     judgeCleared,
     gameStarted,
     setGameStarted,
-  } = useCubeState(faceKanji, difficulty, stopStopwatch); // stopStopwatchをuseCubeStateに渡す
+  } = useCubeState(faceKanji, difficulty, stopStopwatch);
 
   const {
     cameraDistance,
@@ -257,34 +174,33 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
   );
 
   const handleGameStart = async () => {
-    resetCube(); // キューブの状態をリセット
-    resetStopwatch(); // ストップウォッチをリセット
-    setGameStarted(true); // ゲーム開始状態に設定
-    
-    // difficultyが1でない場合のみメンバーをランダム選択
+    resetCube();
+    resetStopwatch();
+    setGameStarted(true);
+
     if (difficulty !== 1) {
-      await loadAndSetRandomFaceKanji(); // ランダムな漢字を設定し、selectedMemberをセット
+      await loadAndSetRandomFaceKanji();
     } else {
-      setFaceKanji(initialFaceKanji); // difficulty=1の場合は初期漢字に戻す
-      setSelectedMember(null); // メンバー情報をクリア
+      setFaceKanji(initialFaceKanji);
+      setSelectedMember(null);
     }
 
-    await randomRotate(); // キューブをシャッフル
-    startStopwatch(); // ストップウォッチを開始
-    setShowLeaderboard(false); // ゲーム開始時はリーダーボードを非表示
+    await randomRotate();
+    startStopwatch();
+    setShowLeaderboard(false);
   };
 
   const handleRetry = () => {
-    setFaceKanji(initialFaceKanji); 
-    resetCube(); // キューブの状態をリセット
-    resetStopwatch(); // ストップウォッチをリセット
-    setGameStarted(false); // ゲーム開始状態をfalseに戻す
-    setSelectedMember(null); // 選択されたメンバーをリセット
-    setShowLeaderboard(false); // リトライ時はリーダーボードを非表示
+    setFaceKanji(initialFaceKanji);
+    resetCube();
+    resetStopwatch();
+    setGameStarted(false);
+    setSelectedMember(null);
+    setShowLeaderboard(false);
   };
 
-  // Firebaseが初期化されるまでローディング表示
-  if (!firebaseAuthReady) {
+  // データロード中やエラー時の表示
+  if (loading || !firebaseAuthReady) {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
@@ -292,10 +208,18 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
       </div>
     );
   }
+  if (error || !data) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>データの読み込みに失敗しました</p>
+      </div>
+    );
+  }
 
   return (
     <div
-      className="rubiks-cube-container" // コンテナにクラスを適用
+      className="rubiks-cube-container"
       onContextMenu={e => e.preventDefault()}
       onPointerUp={handlePointerUp}
     >
@@ -339,7 +263,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
 
       {/* LeaderboardAndScoreSaveコンポーネントをレンダリング (ゲームクリア時) */}
       <LeaderboardAndScoreSave 
-        mode="gameClear" // 新しいmode propを渡す
+        mode="gameClear"
         isCleared={isCleared}
         time={time}
         difficulty={difficulty}
@@ -347,10 +271,9 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
         groupData={groupData}
         links={links}
         onRetry={handleRetry}
-        // ここでFirebaseインスタンスをPropsとして渡します
-        db={dbInstance} 
+        db={dbInstance}
         auth={authInstance}
-        appId={appIdInstance} 
+        appId={appIdInstance}
       />
 
       {/* ゲーム開始用ボタン、難易度選択パネル */}
@@ -367,10 +290,10 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
             <label className="difficulty-option">
               <input
                 type="radio"
-                name="difficulty" // 同じname属性でグループ化
+                name="difficulty"
                 value={1}
                 checked={difficulty === 1}
-                onChange={(e) => setDifficulty(parseInt(e.target.value))} // parseIntで数値に変換
+                onChange={(e) => setDifficulty(parseInt(e.target.value))}
                 className="difficulty-radio"
               />
               Level 1 (色のみ)
@@ -381,7 +304,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
                 name="difficulty"
                 value={2}
                 checked={difficulty === 2}
-                onChange={(e) => setDifficulty(parseInt(e.target.value))} // parseIntで数値に変換
+                onChange={(e) => setDifficulty(parseInt(e.target.value))}
                 className="difficulty-radio"
               />
               Level 2 (文字+色)
@@ -392,7 +315,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
                 name="difficulty"
                 value={3}
                 checked={difficulty === 3}
-                onChange={(e) => setDifficulty(parseInt(e.target.value))} // parseIntで数値に変換
+                onChange={(e) => setDifficulty(parseInt(e.target.value))}
                 className="difficulty-radio"
               />
               Level 3 (文字のみ)
@@ -402,7 +325,7 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
           {/* ベストタイム表示/非表示トグルボタン */}
           <button 
             onClick={() => setShowLeaderboard(!showLeaderboard)} 
-            className="game-button game-button-secondary leaderboard-toggle-button" // 新しいクラスを追加
+            className="game-button game-button-secondary leaderboard-toggle-button"
           >
             {showLeaderboard ? 'ベストタイムを非表示' : 'ベストタイムを表示'}
           </button>
@@ -410,18 +333,11 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
           {/* ベストタイム表の表示 (LeaderboardAndScoreSaveをdisplayOnlyモードで呼び出す) */}
           {showLeaderboard && (
             <LeaderboardAndScoreSave
-              mode="displayOnly" // 新しいmode propを渡す
+              mode="displayOnly"
               difficulty={difficulty}
-              db={dbInstance} 
+              db={dbInstance}
               auth={authInstance}
-              appId={appIdInstance} 
-              // displayOnlyモードでは以下のpropsは不要
-              // isCleared={false}
-              // time={0}
-              // selectedMember={null}
-              // groupData={[]}
-              // links={[]}
-              // onRetry={() => {}}
+              appId={appIdInstance}
             />
           )}
 

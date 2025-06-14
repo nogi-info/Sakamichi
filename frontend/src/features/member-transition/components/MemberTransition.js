@@ -1,9 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
-import Papa from "papaparse";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import Layout from "../../../styles/Layout";
-import './MemberTransition.css'; // CSSファイルをインポート
-
-const csvBase = "/Sakamichi/data/";
+import './MemberTransition.css';
+import { useSakamichiMasterDataContext } from "../../common/SakamichiMasterDataContext";
 
 const groupColors = {
   "乃木坂46": "#812990",
@@ -20,28 +18,107 @@ const parseDate = (str) => {
 };
 
 const MemberTransition = ({ setModalOpen }) => {
-  const [members, setMembers] = useState([]);
-  const [startDates, setStartDates] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [groupPeriods, setGroupPeriods] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const itemRefs = useRef([]);
+  // マスターデータをContextから取得
+  const { data, loading, error } = useSakamichiMasterDataContext();
 
+  // 既存のstate
   const [isCompositionModalOpen, setIsCompositionModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedEventIndex, setSelectedEventIndex] = useState(0);
+  const [filters, setFilters] = useState(() => ({
+    "乃木坂46": true,
+    "櫻坂46": true,
+    "日向坂46": true,
+    "欅坂46": true,
+    "けやき坂46": true,
+    "member_join": true,
+    "discography_release": true,
+  }));
+  const itemRefs = useRef([]);
 
-  const [filters, setFilters] = useState(() => {
-    return {
-      "乃木坂46": true,
-      "櫻坂46": true,
-      "日向坂46": true,
-      "欅坂46": true,
-      "けやき坂46": true,
-      "member_join": true,
-      "discography_release": true,
-    };
-  });
+  // データ取得後に必要なデータをマスターデータから取得
+  const members = useMemo(() => (data && data.members) ? data.members : [], [data]);
+  const startDates = useMemo(() => {
+    // startMap: { "グループ名_加入期": "加入記念日" }
+    if (!data || !data.startMap) return [];
+    // startDatesは [{グループ名, 加入期, 加入記念日}] の配列として再構成
+    return Object.entries(data.startMap).map(([key, value]) => {
+      const [group, period] = key.split("_");
+      return { グループ名: group, 加入期: period, 加入記念日: value };
+    });
+  }, [data]);
+  const groupPeriods = useMemo(() => {
+    // groupMap: { グループ名: [{旧グループ名, 開始日, 終了日}, ...] }
+    if (!data || !data.groupMap) return [];
+    // groupPeriodsは [{グループ名, 旧グループ名, 開始日, 終了日}] の配列
+    return Object.entries(data.groupMap).flatMap(([group, arr]) =>
+      arr.map(period => ({
+        グループ名: group,
+        旧グループ名: period.旧グループ名,
+        開始日: period.開始日,
+        終了日: period.終了日
+      }))
+    );
+  }, [data]);
+  const events = useMemo(() => {
+    // eventMap: { 日付文字列: [イベント, ...] }
+    if (!data || !data.eventMap) return [];
+    // eventListを配列で展開し、dateプロパティをDate型に
+    return Object.entries(data.eventMap)
+      .flatMap(([dateStr, arr]) =>
+        arr.map(e => ({
+          ...e,
+          date: e.date instanceof Date ? e.date : parseDate(dateStr)
+        }))
+      )
+      .filter(e => e.date)
+      .map(e => {
+        if (e.type === "member_join") {
+          return {
+            date: e.date,
+            label: `${e.period}加入`,
+            group: e.group,
+            period: e.period,
+            type: e.type,
+          };
+        } else if (e.type === "discography_release") {
+          return {
+            date: e.date,
+            label: `『${e.title}』`,
+            group: e.group,
+            title: e.title,
+            type: e.type,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.date - b.date);
+  }, [data]);
+
+  // フィルタ適用
+  const filteredEvents = useMemo(() => {
+    return events.filter(event => {
+      const isGroupEnabled = filters[event.group];
+      if (!isGroupEnabled) return false;
+      const isTypeEnabled = filters[event.type];
+      if (!isTypeEnabled) return false;
+      return true;
+    });
+  }, [events, filters]);
+
+  useEffect(() => {
+    if (selectedEvent && filteredEvents.length > 0) {
+      const index = filteredEvents.findIndex(
+        (e) =>
+          e.date.toISOString() === selectedEvent.date.toISOString() &&
+          e.label === selectedEvent.label
+      );
+      if (index !== -1) {
+        setSelectedEventIndex(index);
+      }
+    }
+  }, [selectedEvent, filteredEvents]);
 
   const handleFilterChange = (key) => {
     setFilters(prevFilters => ({
@@ -57,170 +134,8 @@ const MemberTransition = ({ setModalOpen }) => {
         row.グループ名 === group &&
         (row.加入期 || "").replace("生", "") === period.replace("生", "")
     );
-    return row ? parseDate(row.加入記念日) : new Date(0); // 見つからなければ最小値
+    return row ? parseDate(row.加入記念日) : new Date(0);
   };
-
-  useEffect(() => {
-    let baseMembers = [];
-    let addMembers = [];
-    let startList = [];
-    let groupPeriodList = [];
-    let discographyList = [];
-
-    Papa.parse(csvBase + "sakamichi_combined.csv", {
-      download: true,
-      header: true,
-      complete: (baseResult) => {
-        baseMembers = baseResult.data;
-        Papa.parse(csvBase + "sakamichi_combined_add.csv", {
-          download: true,
-          header: true,
-          complete: (addResult) => {
-            addMembers = addResult.data;
-            Papa.parse(csvBase + "sakamichi_start.csv", {
-              download: true,
-              header: true,
-              complete: (startResult) => {
-                startList = startResult.data;
-                Papa.parse(csvBase + "sakamichi_group.csv", {
-                  download: true,
-                  header: true,
-                  complete: (groupResult) => {
-                    groupPeriodList = groupResult.data;
-                    setGroupPeriods(groupPeriodList);
-                    Papa.parse(csvBase + "sakamichi_combined_discography.csv", {
-                      download: true,
-                      header: true,
-                      complete: (discographyResult) => {
-                        discographyList = discographyResult.data;
-
-                        const addMap = {};
-                        addMembers.forEach((row) => {
-                          addMap[`${row.グループ名}_${row.名前}`] = row.加入期;
-                        });
-                        const merged = baseMembers.map((m) => {
-                          const key = `${m.グループ名}_${m.名前}`;
-                          return addMap[key]
-                            ? { ...m, 加入期: addMap[key] }
-                            : m;
-                        });
-
-                        setMembers(merged);
-                        setStartDates(startList);
-
-                        const eventMap = {};
-                        startList.forEach((row) => {
-                          const dateStr = row.加入記念日;
-                          const parsedDate = parseDate(dateStr);
-                          if (parsedDate) {
-                            if (!eventMap[dateStr]) eventMap[dateStr] = [];
-                            eventMap[dateStr].push({
-                              group: row.グループ名,
-                              period: row.加入期,
-                              date: parsedDate,
-                              type: "member_join",
-                            });
-                          }
-                        });
-
-                        discographyList.forEach((row) => {
-                          const dateStr = row.リリース日;
-                          const parsedDate = parseDate(dateStr);
-                          if (parsedDate) {
-                            if (!eventMap[dateStr]) eventMap[dateStr] = [];
-                            eventMap[dateStr].push({
-                              group: row.グループ名,
-                              date: parsedDate,
-                              title: row.タイトル,
-                              type: "discography_release",
-                            });
-                          }
-                        });
-
-                        // グループ名の変換処理も配列に対応
-                        Object.entries(eventMap).forEach(([dateStr, events]) => {
-                          events.forEach((val) => {
-                            const eventDate = val.date;
-                            groupPeriodList.forEach((period) => {
-                              const start = parseDate(period.開始日);
-                              const end = parseDate(period.終了日);
-                              if (
-                                period.旧グループ名 &&
-                                period.グループ名 === val.group &&
-                                start &&
-                                end &&
-                                eventDate >= start &&
-                                eventDate <= end
-                              ) {
-                                val.group = period.旧グループ名;
-                              }
-                            });
-                          });
-                        });
-
-                        // eventListを配列で展開
-                        const eventList = Object.values(eventMap)
-                          .flat()
-                          .filter((e) => e.date)
-                          .map((e) => {
-                            if (e.type === "member_join") {
-                              return {
-                                date: e.date,
-                                label: `${e.period}加入`,
-                                group: e.group,
-                                period: e.period,
-                                type: e.type,
-                              };
-                            } else if (e.type === "discography_release") {
-                              return {
-                                date: e.date,
-                                label: `『${e.title}』`,
-                                group: e.group,
-                                title: e.title,
-                                type: e.type,
-                              };
-                            }
-                            return null;
-                          })
-                          .filter(Boolean)
-                          .sort((a, b) => a.date - b.date);
-
-                        setEvents(eventList);
-                        setLoading(false);
-                      },
-                    });
-                  },
-                });
-              },
-            });
-          },
-        });
-      },
-    });
-  }, []);
-
-  const filteredEvents = events.filter(event => {
-    const isGroupEnabled = filters[event.group];
-    if (!isGroupEnabled) return false;
-
-    const isTypeEnabled = filters[event.type];
-    if (!isTypeEnabled) return false;
-
-    return true;
-  });
-
-  useEffect(() => {
-    if (selectedEvent && filteredEvents.length > 0) {
-      const index = filteredEvents.findIndex(
-        (e) =>
-          e.date.toISOString() === selectedEvent.date.toISOString() &&
-          e.label === selectedEvent.label
-      );
-      if (index !== -1) {
-        setSelectedEventIndex(index);
-      }
-    }
-  }, [selectedEvent, filteredEvents]);
 
   const getActiveMembersByGroupAndPeriod = (targetDate) => {
     if (!members.length || !startDates.length) return {};
@@ -264,10 +179,6 @@ const MemberTransition = ({ setModalOpen }) => {
     return result;
   };
 
-  if (loading) {
-    return <Layout><div>読み込み中...</div></Layout>;
-  }
-
   const displayGroups = ["乃木坂46", "欅坂46", "櫻坂46", "けやき坂46", "日向坂46"];
 
   const handleTimelineItemClick = (item) => {
@@ -295,15 +206,21 @@ const MemberTransition = ({ setModalOpen }) => {
   const isPrevDisabled = selectedEventIndex === 0;
   const isNextDisabled = selectedEventIndex === filteredEvents.length - 1;
 
+  if (loading) {
+    return <Layout><div>読み込み中...</div></Layout>;
+  }
+  if (error || !data) {
+    return <Layout><div>データの読み込みに失敗しました</div></Layout>;
+  }
+
   return (
     <Layout>
       {/* ★フィルターコンテナを一つにまとめる★ */}
-      <div className="member-transition-filter-container"> {/* 新しい親コンテナ名 */}
-        <div className="filter-options-wrapper"> {/* グループとイベントタイプをまとめるラッパー */}
-          {/* グループフィルター部分 */}
+      <div className="member-transition-filter-container">
+        <div className="filter-options-wrapper">
           <div className="filter-group-section">
             <h4 className="filter-subsection-title">グループ</h4>
-            <div className="filter-checkboxes-horizontal"> {/* 横並び用ラッパー */}
+            <div className="filter-checkboxes-horizontal">
               {["乃木坂46", "櫻坂46", "日向坂46", "欅坂46", "けやき坂46"].map(group => (
                 <div key={group} className="checkbox-group" style={{ '--group-color': groupColors[group] }}>
                   <input
@@ -312,17 +229,14 @@ const MemberTransition = ({ setModalOpen }) => {
                     checked={filters[group]}
                     onChange={() => handleFilterChange(group)}
                   />
-                  {/* ★ラベルのfor属性とinputのidを一致させることで、ラベルクリックを有効にする★ */}
                   <label htmlFor={`filter-${group}`}>{group}</label>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* イベントタイプフィルター部分 */}
           <div className="filter-type-section">
             <h4 className="filter-subsection-title">イベントタイプ</h4>
-            <div className="filter-checkboxes-vertical"> {/* 縦並び用ラッパー */}
+            <div className="filter-checkboxes-vertical">
               <div className="checkbox-group">
                 <input
                   type="checkbox"
@@ -543,7 +457,6 @@ const MemberTransition = ({ setModalOpen }) => {
                         {group}（{Object.values(getActiveMembersByGroupAndPeriod(selectedEvent.date)[group])
                           .reduce((sum, names) => sum + names.length, 0)}人）
                       </div>
-                      {/* periodでソート */}
                       {Object.entries(getActiveMembersByGroupAndPeriod(selectedEvent.date)[group]).sort(([a], [b]) => {
                         const dateA = getPeriodStartDate(group, a);
                         const dateB = getPeriodStartDate(group, b);

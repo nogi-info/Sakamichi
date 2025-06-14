@@ -1,55 +1,35 @@
-import React, { useEffect, useState } from "react";
-import Papa from "papaparse";
+import React, { useEffect, useState, useMemo } from "react";
 import Layout from "../../../styles/Layout";
-import MemberCard from "../../member-list/components/MemberCard"; // MemberCardコンポーネントをインポート
-import './Home.css'; // 新しいCSSファイルをインポート
-
-const CSV_COMBINED_PATH = "/Sakamichi/data/sakamichi_combined.csv";
-const CSV_LINK_PATH = "/Sakamichi/data/sakamichi_link.csv";
-const GROUP_CSV_FILE_PATH = "/Sakamichi/data/sakamichi_group.csv"; // グループCSVパスを追加
+import MemberCard from "../../member-list/components/MemberCard";
+import './Home.css';
+import { useSakamichiMasterDataContext } from "../../common/SakamichiMasterDataContext";
 
 const Home = () => {
-  const [allMembers, setAllMembers] = useState([]);
-  const [links, setLinks] = useState([]);
-  const [groupData, setGroupData] = useState([]); // groupDataのstateを追加
+  // マスターデータをContextから取得
+  const { data, loading, error } = useSakamichiMasterDataContext();
+
+  // members, links, groupDataをマスターデータから取得
+  const allMembers = useMemo(() => (data && data.members) ? data.members : [], [data]);
+  const links = allMembers; // 各メンバーのリンク情報はmembersに含まれているため
+  const groupData = useMemo(() => {
+    // groupMap: { グループ名: [{旧グループ名, 開始日, 終了日}, ...] }
+    if (!data || !data.groupMap) return [];
+    return Object.entries(data.groupMap).flatMap(([group, arr]) =>
+      arr.map(period => ({
+        グループ名: group,
+        旧グループ名: period.旧グループ名,
+        開始日: period.開始日,
+        終了日: period.終了日
+      }))
+    );
+  }, [data]);
+
+  // 誕生日メンバーの抽出
   const [birthdayMembersToday, setBirthdayMembersToday] = useState([]);
   const [birthdayMembersThisMonth, setBirthdayMembersThisMonth] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchMemberData = async () => {
-      try {
-        // メンバー情報を読み込む
-        const combinedResponse = await fetch(CSV_COMBINED_PATH);
-        const combinedText = await combinedResponse.text();
-        const combinedResult = Papa.parse(combinedText, { header: true, skipEmptyLines: true });
-        const parsedMembers = combinedResult.data.filter(member => member.名前 && member.グループ名 && member.生年月日);
-
-        // リンク情報を読み込む
-        const linkResponse = await fetch(CSV_LINK_PATH);
-        const linkText = await linkResponse.text();
-        const linkResult = Papa.parse(linkText, { header: true, skipEmptyLines: true });
-
-        // グループ情報を読み込む
-        const groupResponse = await fetch(GROUP_CSV_FILE_PATH);
-        const groupText = await groupResponse.text();
-        const groupResult = Papa.parse(groupText, { header: true, skipEmptyLines: true });
-        
-        setAllMembers(parsedMembers);
-        setLinks(linkResult.data);
-        setGroupData(groupResult.data); // groupDataをstateにセット
-        setLoading(false);
-      } catch (error) {
-        console.error("CSVファイルの読み込み中にエラーが発生しました:", error);
-        setLoading(false);
-      }
-    };
-
-    fetchMemberData();
-  }, []);
-
-  useEffect(() => {
-    if (allMembers.length === 0) return;
+    if (!allMembers.length) return;
 
     const today = new Date();
     const currentMonth = today.getMonth(); // 0-11
@@ -65,7 +45,6 @@ const Home = () => {
       const memberMonth = birthDate.getMonth();
       const memberDay = birthDate.getDate();
 
-      // 現役・元メンバー問わず、誕生日が今月のメンバーを抽出
       if (memberMonth === currentMonth) {
         thisMonthBirthdays.push(member);
         if (memberDay === currentDay) {
@@ -83,10 +62,13 @@ const Home = () => {
     setBirthdayMembersToday(todayBirthdays);
     setBirthdayMembersThisMonth(thisMonthBirthdays);
 
-  }, [allMembers]); // allMembersが更新されたときに再計算
+  }, [allMembers]);
 
   if (loading) {
     return <Layout><div>Loading...</div></Layout>;
+  }
+  if (error || !data) {
+    return <Layout><div>データの読み込みに失敗しました</div></Layout>;
   }
 
   return (
@@ -97,7 +79,6 @@ const Home = () => {
           <p className="home-description">
             坂道ファンが趣味で作りました<br />
           </p>
-          {/* 免責事項の追加 */}
           <p className="home-disclaimer">
             ※ 本サイトはファンサイトであり、掲載されている情報が必ずしも正確であるとは限りません。<br />
             予めご了承ください。
@@ -115,9 +96,9 @@ const Home = () => {
                   member={member} 
                   groupName={member.グループ名} 
                   links={links} 
-                  groupData={groupData} // groupDataを渡す
-                  isBirthdayToday={true} // 本日誕生日のフラグを渡す
-                  initialExpanded={true} // 初期状態で展開
+                  groupData={groupData}
+                  isBirthdayToday={true}
+                  initialExpanded={true}
                 />
               ))}
             </ul>
@@ -135,7 +116,7 @@ const Home = () => {
                   member={member} 
                   groupName={member.グループ名} 
                   links={links}
-                  groupData={groupData} // groupDataを渡す
+                  groupData={groupData}
                 />
               ))}
             </ul>
