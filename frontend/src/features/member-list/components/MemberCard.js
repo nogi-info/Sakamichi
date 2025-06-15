@@ -28,37 +28,13 @@ const calculateAge = (birthDate) => {
 };
 
 // isBirthdayToday と groupData プロパティを追加
-const MemberCard = ({ member, groupName: initialGroupName, links, isBirthdayToday = false, groupData, initialExpanded = false}) => {
+const MemberCard = ({ member, displayGroupName = member.グループ名, isBirthdayToday = false, initialExpanded = false}) => {
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const joinPeriod = member.加入期?.match(/\d+/)?.[0] || "1";
-  const age = calculateAge(member.生年月日);
-  const memberLinks = links.find((link) => link.名前 === member.名前) || {};
-  const profileLink = memberLinks.プロフィール;
-  const officialLink = memberLinks.公式HP;
-
-  // グループ名置換ロジック
-  let displayGroupName = initialGroupName; // 表示用グループ名の初期値は元のグループ名
-  const today = new Date(); // 現在の日付
-  const gradDateStr = member['卒業・辞退・契約終了日'] ? member['卒業・辞退・契約終了日'].trim() : '-';
-  // 卒業日がハイフンの場合は現在の日付、それ以外は日付形式に変換
-  const gradDate = gradDateStr === '-' ? today : new Date(gradDateStr);
-
-  // groupData が存在し、内容がある場合にのみ置換処理を行う
-  if (groupData && groupData.length > 0) {
-    const matchingGroup = groupData.find(group => group['グループ名'] === initialGroupName);
-
-    if (matchingGroup) {
-      const groupStartDate = new Date(matchingGroup['開始日']);
-      const groupEndDate = new Date(matchingGroup['終了日']);
-
-      // メンバーの卒業日（または現役なら現在日）が旧グループ名の活動期間内にある場合
-      // RubiksCube.jsx と同様のロジックを適用
-      if (gradDate >= groupStartDate && gradDate <= groupEndDate) {
-        displayGroupName = matchingGroup['旧グループ名']; // 旧グループ名に置換
-      }
-    }
-  }
-
+  const age =  calculateAge(member.生年月日);
+  const profileLink = member.プロフィール;
+  const officialLink = member.公式HP;
+  
   // 置換されたグループ名を使用して最初の文字と色を決定
   const shortGroupName = displayGroupName.charAt(0);
   const displayJoinPeriod = `${shortGroupName}-${joinPeriod}`;
@@ -75,8 +51,6 @@ const MemberCard = ({ member, groupName: initialGroupName, links, isBirthdayToda
         flexDirection: "column",
         padding: "15px", // MemberCardが単独で表示されるためパディングを追加
         borderRadius: "10px", // 角を丸く
-        // maxWidth: "300px", // 削除
-        // margin: "0 auto", // 削除
       }}
       onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
       onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}

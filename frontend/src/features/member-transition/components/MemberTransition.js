@@ -144,20 +144,7 @@ const MemberTransition = ({ setModalOpen }) => {
     groupList.forEach((g) => (result[g] = {}));
     members.forEach((m) => {
       const m期 = m.加入期 || "";
-      let group = m.グループ名;
-      for (const period of groupPeriods) {
-        if (
-          period.旧グループ名 &&
-          period.グループ名 === group &&
-          parseDate(period.開始日) &&
-          parseDate(period.終了日) &&
-          targetDate >= parseDate(period.開始日) &&
-          targetDate <= parseDate(period.終了日)
-        ) {
-          group = period.旧グループ名;
-          break;
-        }
-      }
+      let group = m.getCorrectGroupName(targetDate) || m.グループ名;
       if (!result[group]) return;
       const startRow = startDates.find(
         (row) =>

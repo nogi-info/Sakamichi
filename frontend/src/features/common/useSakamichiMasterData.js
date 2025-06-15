@@ -185,14 +185,38 @@ export function useSakamichiMasterData() {
                                 // members["グループ名"]は乃木坂46/櫻坂46/日向坂46
                                 // members["修正加入期"]は合同オーディションの新X期、他特殊加入対応
                                 const masterData = {
-                                  members: merged,
+                                  members: merged.map(m => ({
+                                    key : `${m.グループ名}_${m.名前}`,
+                                    ...m,
+                                    getCorrectGroupName(date) {
+                                      // "卒業・辞退・契約終了日"のパース
+                                      const gradDateStr = m["卒業・辞退・契約終了日"];
+                                      const gradDate = gradDateStr && gradDateStr !== "-" ? parseDate(gradDateStr) : null;
+
+                                      // 引数dateがDate型でなければパース
+                                      const targetDate = date instanceof Date ? date : parseDate(date);
+
+                                      // 卒業日が指定されていない場合、既存ロジックでdate時点のグループ名
+                                      if (!gradDate) {
+                                        return masterData.getCorrectGroupName(m.グループ名, targetDate);
+                                      }
+
+                                      // 卒業日が指定されている場合
+                                      if (gradDate < targetDate) {
+                                        // 卒業日がdateより前 → 卒業日時点のグループ名
+                                        return masterData.getCorrectGroupName(m.グループ名, gradDate);
+                                      } else {
+                                        // 卒業日がdateより後 → date時点のグループ名
+                                        return masterData.getCorrectGroupName(m.グループ名, targetDate);
+                                      }
+                                    }
+                                  })),
                                   startMap,
                                   groupMap,
                                   eventMap,
                                   getMemberInfo: (group, name) =>
                                     merged.find(m => m.グループ名 === group && m.名前 === name),
-                                  getCorrectGroupName: (group, dateStr) => {
-                                    const date = parseDate(dateStr);
+                                  getCorrectGroupName: (group, date) => {
                                     if (!groupMap[group] || !date) return group;
                                     for (const period of groupMap[group]) {
                                       const start = parseDate(period.開始日);
@@ -202,9 +226,18 @@ export function useSakamichiMasterData() {
                                       }
                                     }
                                     return group;
+                                  },
+                                  calculateAge : (member) => {
+                                    const today = new Date();
+                                    const birth = new Date(member.生年月日);
+                                    let age = today.getFullYear() - birth.getFullYear();
+                                    const monthDiff = today.getMonth() - birth.getMonth();
+                                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                                      age--;
+                                    }
+                                    return age;
                                   }
                                 };
-
                                 cachedMasterData = masterData;
                                 setData(masterData);
                                 setLoading(false);

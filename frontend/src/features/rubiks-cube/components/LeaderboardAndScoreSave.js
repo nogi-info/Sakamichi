@@ -101,7 +101,7 @@ const BestTimesDisplay = ({ leaderboardTimes, highlightedScoreId, latestUserScor
  * - auth: Firebase Authのauthインスタンス (Firebaseの初期化後にRubiksCubeから渡される)
  * - appId: FirebaseのアプリID (Firebaseの初期化後にRubiksCubeから渡される)
  */
-function LeaderboardAndScoreSave({ mode, isCleared, time, difficulty, selectedMember, groupData, links, onRetry, db, auth, appId }) {
+function LeaderboardAndScoreSave({ mode, isCleared, time, difficulty, selectedMember, onRetry, db, auth, appId }) {
   // Firestore関連のState
   const [leaderboardTimes, setLeaderboardTimes] = useState([]); // Firestoreから取得したベストタイム (常に上位20件)
   const [showSaveScoreModal, setShowSaveScoreModal] = useState(false); // スコア保存モーダルの表示状態
@@ -311,9 +311,7 @@ function LeaderboardAndScoreSave({ mode, isCleared, time, difficulty, selectedMe
               {/* MemberCard コンポーネントを直接使用 */}
               <MemberCard 
                 member={selectedMember} 
-                groupName={selectedMember['グループ名']} // メンバーオブジェクトからグループ名を取得
-                links={links} // linksはRubiksCubeコンポーネントのstateから渡す
-                groupData={groupData} // groupDataもRubiksCubeコンポーネントのstateから渡す
+                displayGroupName={selectedMember.getCorrectGroupName(new Date())}
                 initialExpanded={true} // 初期状態で展開
               />
             </div>

@@ -51,18 +51,8 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
   const [showAxes, setShowAxes] = useState(false);
   const [debugInfo, setDebugInfo] = useState({});
 
-  // マスターデータからグループ情報・リンク情報を取得
-  const groupData = useMemo(() => (data && data.groupMap)
-    ? Object.entries(data.groupMap).flatMap(([group, arr]) =>
-        arr.map(period => ({
-          グループ名: group,
-          旧グループ名: period.旧グループ名,
-          開始日: period.開始日,
-          終了日: period.終了日
-        }))
-      )
-    : [], [data]);
-  const links = useMemo(() => (data && data.members) ? data.members : [], [data]);
+  // マスターデータから情報を取得
+  const members = useMemo(() => (data && data.members) ? data.members : [], [data]);
 
   // Firebase初期化
   useEffect(() => {
@@ -85,36 +75,22 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
 
   // メンバーからランダムにfaceKanjiを生成
   const loadAndSetRandomFaceKanji = async () => {
-    if (!links.length) {
+    if (!members.length) {
       setFaceKanji(initialFaceKanji);
       setSelectedMember(null);
       return;
     }
-    const dataRows = links;
-    const randomIndex = Math.floor(Math.random() * dataRows.length);
-    const selectedRow = dataRows[randomIndex];
+    const randomIndex = Math.floor(Math.random() * members.length);
+    const selectedMember = members[randomIndex];
 
-    let groupName = selectedRow['グループ名'] ? selectedRow['グループ名'].trim() : '';
-    const name = selectedRow['名前'] ? selectedRow['名前'].trim() : '';
-
-    // グループ名置換判定
-    const today = new Date();
-    const gradDateStr = selectedRow['卒業・辞退・契約終了日'] ? selectedRow['卒業・辞退・契約終了日'].trim() : '-';
-    const gradDate = gradDateStr === '-' ? today : new Date(gradDateStr);
-    const matchingGroup = groupData.find(group =>
-      group['グループ名'] === groupName &&
-      gradDate >= new Date(group['開始日']) &&
-      gradDate <= new Date(group['終了日'])
-    );
-    if (matchingGroup) {
-      groupName = matchingGroup['旧グループ名'];
-    }
+    const groupName = selectedMember.getCorrectGroupName(new Date());
+    const name = selectedMember.名前 ? selectedMember.名前.trim() : '';
 
     const combinedString = name + groupName;
     const newFaceKanji = combinedString.substring(0, 6);
 
     setFaceKanji(newFaceKanji || initialFaceKanji);
-    setSelectedMember(selectedRow);
+    setSelectedMember(selectedMember);
   };
 
   const { time, startStopwatch, stopStopwatch, resetStopwatch } = useStopwatch();
@@ -268,8 +244,6 @@ function RubiksCube({ initialFaceKanji = "乃木櫻日向坂" }) {
         time={time}
         difficulty={difficulty}
         selectedMember={selectedMember}
-        groupData={groupData}
-        links={links}
         onRetry={handleRetry}
         db={dbInstance}
         auth={authInstance}

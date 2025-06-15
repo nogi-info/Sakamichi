@@ -247,9 +247,9 @@ const MemberListByYear = () => {
                 {year}年度生まれ
               </h2>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <GroupList members={membersByYear[year]} groupName="乃木坂46" filters={filters["乃木坂46"] || {}} links={links} />
-                <GroupList members={membersByYear[year]} groupName="櫻坂46" filters={filters["櫻坂46"] || {}} links={links} />
-                <GroupList members={membersByYear[year]} groupName="日向坂46" filters={filters["日向坂46"] || {}} links={links} />
+                <GroupList members={membersByYear[year]} groupName="乃木坂46" filters={filters["乃木坂46"] || {}} />
+                <GroupList members={membersByYear[year]} groupName="櫻坂46" filters={filters["櫻坂46"] || {}} />
+                <GroupList members={membersByYear[year]} groupName="日向坂46" filters={filters["日向坂46"] || {}} />
               </div>
             </div>
           ))
@@ -266,10 +266,9 @@ const MemberListByYear = () => {
                 <ul style={{ listStyle: "none", padding: 0 }}>
                   {groupedAllMembersByYear[year].map((member, index) => (
                     <MemberCard
-                      key={`${member.名前}-${index}`}
+                      key={member.key}
                       member={member}
-                      groupName={member.グループ名}
-                      links={links}
+                      displayGroupName={member.グループ名}
                     />
                   ))}
                 </ul>

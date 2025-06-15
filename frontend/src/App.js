@@ -87,6 +87,9 @@ function MasterDataDebugger() {
   useEffect(() => {
     if (data) {
       console.log("Sakamichi Master Data:", data);
+      const testTargetName = "遠藤さくら";
+      const targetMember = data.members.find(member => member.名前 === testTargetName);
+      console.log(testTargetName + " : " + targetMember.getCorrectGroupName(new Date()));
     }
     if (error) {
       console.error("Sakamichi Master Data Load Error:", error);
@@ -103,7 +106,7 @@ function App() {
 
   return (
     <SakamichiMasterDataProvider>
-      <MasterDataDebugger />
+      {process.env.REACT_APP_DEBUG === 'true' && <MasterDataDebugger />} {/* デバッグモードのときのみマスターデータを表示 */}
       {/* BrowserRouterを使用してルーティングを管理 */}
       {/* basename="/Sakamichi" で、GitHub Pages のサブディレクトリパスをベースとして設定 */}
       <BrowserRouter basename="/Sakamichi">

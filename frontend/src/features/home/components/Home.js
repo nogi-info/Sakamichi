@@ -35,6 +35,10 @@ const Home = () => {
     const currentMonth = today.getMonth(); // 0-11
     const currentDay = today.getDate(); // 1-31
 
+    // デバッグ用
+    // const currentMonth = 5;
+    // const currentDay = 8;
+
     const todayBirthdays = [];
     const thisMonthBirthdays = [];
 
@@ -90,13 +94,11 @@ const Home = () => {
           <div className="birthday-section today-birthday-section">
             <h2 className="section-title">本日誕生日！おめでとう！</h2>
             <ul className="member-card-list">
-              {birthdayMembersToday.map((member, index) => (
-                <MemberCard 
-                  key={member.名前 + index} 
+              {birthdayMembersToday.map((member) => (
+                <MemberCard
+                  key={member.key}
                   member={member} 
-                  groupName={member.グループ名} 
-                  links={links} 
-                  groupData={groupData}
+                  displayGroupName={member.getCorrectGroupName(new Date())}
                   isBirthdayToday={true}
                   initialExpanded={true}
                 />
@@ -111,12 +113,10 @@ const Home = () => {
             <h2 className="section-title">今月誕生日（{new Date().getMonth() + 1}月）</h2>
             <ul className="member-card-list">
               {birthdayMembersThisMonth.map((member, index) => (
-                <MemberCard 
-                  key={member.名前 + index} 
+                <MemberCard
+                  key={member.key}
                   member={member} 
-                  groupName={member.グループ名} 
-                  links={links}
-                  groupData={groupData}
+                  displayGroupName={member.getCorrectGroupName(new Date())} 
                 />
               ))}
             </ul>

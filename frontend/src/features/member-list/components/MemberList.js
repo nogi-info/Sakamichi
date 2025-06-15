@@ -1,7 +1,7 @@
 import React from "react";
 import MemberCard from "./MemberCard"; // MemberCardを正しくインポートしているか確認
 
-const GroupList = ({ members, groupName, filters, links }) => {
+const GroupList = ({ members, groupName, filters}) => {
   return (
     <ul style={{ listStyle: "none", padding: 0, flex: 1, margin: "0 4px" }}>
       {members
@@ -15,7 +15,7 @@ const GroupList = ({ members, groupName, filters, links }) => {
           );
         })
         .map((member, index) => (
-          <MemberCard key={index} member={member} groupName={groupName} links={links} />
+          <MemberCard key={`${member.key}_${index}`} member={member} displayGroupName={groupName}/>
         ))}
     </ul>
   );
