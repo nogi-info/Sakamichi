@@ -1,18 +1,11 @@
 import { useEffect, useState } from "react";
 import Papa from "papaparse";
+import { parseDate, getMemberDisplayGroupName as getMemberDisplayGroupNameUtil, calculateAge as calculateAgeUtil } from "./utils/memberUtils";
 
-// グローバルキャッシュ
+// グローバルキャッシュ (変更なし)
 let cachedMasterData = null;
 let cachedError = null;
 let cachedPromise = null;
-
-// 日付パース関数
-function parseDate(str) {
-  if (!str || str === "-") return null;
-  // 例: "2020/01/01" or "2020-01-01"
-  const d = new Date(str.replace(/-/g, "/"));
-  return isNaN(d) ? null : d;
-}
 
 export function useSakamichiMasterData() {
   const [data, setData] = useState(cachedMasterData);
@@ -185,58 +178,15 @@ export function useSakamichiMasterData() {
                                 // members["グループ名"]は乃木坂46/櫻坂46/日向坂46
                                 // members["修正加入期"]は合同オーディションの新X期、他特殊加入対応
                                 const masterData = {
-                                  members: merged.map(m => ({
+                                  members: merged.map((m) => ({
                                     key : `${m.グループ名}_${m.名前}`,
                                     ...m,
-                                    getCorrectGroupName(date) {
-                                      // "卒業・辞退・契約終了日"のパース
-                                      const gradDateStr = m["卒業・辞退・契約終了日"];
-                                      const gradDate = gradDateStr && gradDateStr !== "-" ? parseDate(gradDateStr) : null;
-
-                                      // 引数dateがDate型でなければパース
-                                      const targetDate = date instanceof Date ? date : parseDate(date);
-
-                                      // 卒業日が指定されていない場合、既存ロジックでdate時点のグループ名
-                                      if (!gradDate) {
-                                        return masterData.getCorrectGroupName(m.グループ名, targetDate);
-                                      }
-
-                                      // 卒業日が指定されている場合
-                                      if (gradDate < targetDate) {
-                                        // 卒業日がdateより前 → 卒業日時点のグループ名
-                                        return masterData.getCorrectGroupName(m.グループ名, gradDate);
-                                      } else {
-                                        // 卒業日がdateより後 → date時点のグループ名
-                                        return masterData.getCorrectGroupName(m.グループ名, targetDate);
-                                      }
-                                    }
                                   })),
                                   startMap,
                                   groupMap,
                                   eventMap,
                                   getMemberInfo: (group, name) =>
                                     merged.find(m => m.グループ名 === group && m.名前 === name),
-                                  getCorrectGroupName: (group, date) => {
-                                    if (!groupMap[group] || !date) return group;
-                                    for (const period of groupMap[group]) {
-                                      const start = parseDate(period.開始日);
-                                      const end = parseDate(period.終了日);
-                                      if (start && end && date >= start && date <= end) {
-                                        return period.旧グループ名;
-                                      }
-                                    }
-                                    return group;
-                                  },
-                                  calculateAge : (member) => {
-                                    const today = new Date();
-                                    const birth = new Date(member.生年月日);
-                                    let age = today.getFullYear() - birth.getFullYear();
-                                    const monthDiff = today.getMonth() - birth.getMonth();
-                                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-                                      age--;
-                                    }
-                                    return age;
-                                  }
                                 };
                                 cachedMasterData = masterData;
                                 setData(masterData);

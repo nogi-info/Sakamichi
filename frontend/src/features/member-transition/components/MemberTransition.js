@@ -2,19 +2,16 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import Layout from "../../../styles/Layout";
 import './MemberTransition.css';
 import { useSakamichiMasterDataContext } from "../../common/SakamichiMasterDataContext";
+// Import parseDate and getMemberDisplayGroupName from common utilities
+import { parseDate, getMemberDisplayGroupName } from "../../common/utils/memberUtils";
 
+// Define groupColors here as it's used in JSX and logic
 const groupColors = {
   "乃木坂46": "#812990",
   "櫻坂46": "#F19DB5",
   "日向坂46": "#7CC7E8",
   "欅坂46": "#5eb954",
   "けやき坂46": "#5eb954",
-};
-
-const parseDate = (str) => {
-  if (!str || str === "-") return null;
-  const [y, m, d] = str.split("/").map(Number);
-  return new Date(y, m - 1, d);
 };
 
 const MemberTransition = ({ setModalOpen }) => {
@@ -35,8 +32,21 @@ const MemberTransition = ({ setModalOpen }) => {
     "discography_release": true,
   }));
   const itemRefs = useRef([]);
+  // Add states for auto-scrolling logic
+  const isUserScrolling = useRef(true);
+  const [isNarrowScreen, setIsNarrowScreen] = useState(false);
 
-  // データ取得後に必要なデータをマスターデータから取得
+  // Screen width detection for auto-scrolling
+  useEffect(() => {
+    const handleResize = () => {
+      setIsNarrowScreen(window.innerWidth <= 900); // 900px breakpoint
+    };
+    handleResize(); // Set initial value
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize); // Corrected: remove 'resize' listener
+  }, []);
+
+  // Data derived from master data context
   const members = useMemo(() => (data && data.members) ? data.members : [], [data]);
   const startDates = useMemo(() => {
     // startMap: { "グループ名_加入期": "加入記念日" }
@@ -68,7 +78,7 @@ const MemberTransition = ({ setModalOpen }) => {
       .flatMap(([dateStr, arr]) =>
         arr.map(e => ({
           ...e,
-          date: e.date instanceof Date ? e.date : parseDate(dateStr)
+          date: e.date instanceof Date ? e.date : parseDate(dateStr) // Use imported parseDate
         }))
       )
       .filter(e => e.date)
@@ -76,7 +86,7 @@ const MemberTransition = ({ setModalOpen }) => {
         if (e.type === "member_join") {
           return {
             date: e.date,
-            label: `${e.period}加入`,
+            label: `${e.group} ${e.period}加入`, // Changed label to include group name for clarity in timeline
             group: e.group,
             period: e.period,
             type: e.type,
@@ -107,6 +117,52 @@ const MemberTransition = ({ setModalOpen }) => {
     });
   }, [events, filters]);
 
+  // Initialize selectedEvent and selectedEventIndex when filteredEvents are loaded
+  useEffect(() => {
+    if (!selectedEvent && filteredEvents.length > 0) {
+      setSelectedEvent(filteredEvents[0]);
+      setSelectedEventIndex(0);
+    }
+  }, [filteredEvents, selectedEvent]);
+
+  // Auto-scrolling logic (similar to original Home.js logic)
+  useEffect(() => {
+    if (filteredEvents.length === 0) return;
+    const onScroll = () => {
+      if (isUserScrolling.current && !isNarrowScreen) {
+        const center = window.innerHeight / 2;
+        let minDiff = Infinity;
+        let idx = 0;
+        itemRefs.current.forEach((ref, i) => {
+          if (ref) {
+            const rect = ref.getBoundingClientRect();
+            const diff = Math.abs(rect.top + rect.height / 2 - center);
+            if (diff < minDiff) {
+              minDiff = diff;
+              idx = i;
+            }
+          }
+        });
+        if (idx !== selectedEventIndex) { // Only update if index changed
+          setSelectedEvent(filteredEvents[idx]);
+        }
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll(); // Initial run
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [filteredEvents, isNarrowScreen, selectedEventIndex]);
+
+  // Scroll to selected event when selectedEventIndex changes
+  useEffect(() => {
+    if (itemRefs.current[selectedEventIndex]) {
+      isUserScrolling.current = false; // Programmatic scroll
+      itemRefs.current[selectedEventIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const timer = setTimeout(() => { isUserScrolling.current = true; }, 500); // smooth scroll duration
+      return () => clearTimeout(timer);
+    }
+  }, [selectedEventIndex]);
+
   useEffect(() => {
     if (selectedEvent && filteredEvents.length > 0) {
       const index = filteredEvents.findIndex(
@@ -127,7 +183,7 @@ const MemberTransition = ({ setModalOpen }) => {
     }));
   };
 
-  // periodごとの開始日を取得する関数
+  // periodごとの開始日を取得する関数 (used in modal for sorting)
   const getPeriodStartDate = (group, period) => {
     const row = startDates.find(
       (row) =>
@@ -137,14 +193,16 @@ const MemberTransition = ({ setModalOpen }) => {
     return row ? parseDate(row.加入記念日) : new Date(0);
   };
 
+  // getActiveMembersByGroupAndPeriod function
   const getActiveMembersByGroupAndPeriod = (targetDate) => {
-    if (!members.length || !startDates.length) return {};
+    if (!members.length || !data?.groupMap || !startDates.length) return {};
     const groupList = ["乃木坂46", "欅坂46", "櫻坂46", "けやき坂46", "日向坂46"];
     const result = {};
     groupList.forEach((g) => (result[g] = {}));
     members.forEach((m) => {
-      const m期 = m.加入期 || "";
-      let group = m.getCorrectGroupName(targetDate) || m.グループ名;
+      const m期 = m.加入期 || ""; // メンバーの加入期
+      // Use getMemberDisplayGroupName utility
+      const group = getMemberDisplayGroupName(m, data.groupMap, targetDate);
       if (!result[group]) return;
       const startRow = startDates.find(
         (row) =>
@@ -152,11 +210,11 @@ const MemberTransition = ({ setModalOpen }) => {
           (row.加入期 || "").replace("生", "") === m期.replace("生", "")
       );
       const joinDate = startRow ? parseDate(startRow.加入記念日) : null;
-      if (!joinDate) return;
+      if (!joinDate) return; // If joinDate is invalid, skip
       const gradDate = parseDate(m["卒業・辞退・契約終了日"]);
       if (
         targetDate >= joinDate &&
-        (!gradDate || targetDate < gradDate)
+        (!gradDate || targetDate < gradDate) // If gradDate is not set, or targetDate is before gradDate
       ) {
         const period = m.加入期 || "不明";
         if (!result[group][period]) result[group][period] = [];
@@ -166,6 +224,7 @@ const MemberTransition = ({ setModalOpen }) => {
     return result;
   };
 
+  // Define displayGroups here as it's used in JSX
   const displayGroups = ["乃木坂46", "欅坂46", "櫻坂46", "けやき坂46", "日向坂46"];
 
   const handleTimelineItemClick = (item) => {
@@ -193,12 +252,14 @@ const MemberTransition = ({ setModalOpen }) => {
   const isPrevDisabled = selectedEventIndex === 0;
   const isNextDisabled = selectedEventIndex === filteredEvents.length - 1;
 
-  if (loading) {
-    return <Layout><div>読み込み中...</div></Layout>;
-  }
+  if (loading) return <Layout><div>読み込み中...</div></Layout>;
   if (error || !data) {
     return <Layout><div>データの読み込みに失敗しました</div></Layout>;
   }
+  // Derive currentEvent and activeByGroupAndPeriod from selectedEvent
+  const currentEvent = selectedEvent || filteredEvents[0]; // Ensure currentEvent is set, fallback to first filtered event
+  const activeByGroupAndPeriod = currentEvent ? getActiveMembersByGroupAndPeriod(currentEvent.date) : {};
+
 
   return (
     <Layout>
@@ -398,7 +459,7 @@ const MemberTransition = ({ setModalOpen }) => {
               </div>
             </div>
             <div
-              className="member-composition-card"
+              className="member-composition-body" // Corrected class name from member-composition-card
               style={{
                 background: "#fff",
                 borderRadius: "12px",

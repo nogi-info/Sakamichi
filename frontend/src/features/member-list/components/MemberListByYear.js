@@ -1,9 +1,13 @@
 import React, { useMemo, useState } from "react";
 import GroupList from "./MemberList";
 import MemberCard from "./MemberCard";
-import Layout from "../../../styles/Layout";
+import Layout from "../../../styles/Layout"; // Layoutは共通なのでそのまま
 import './MemberListByYear.css';
 import { useSakamichiMasterDataContext } from "../../common/SakamichiMasterDataContext";
+import { useMemberFilterOptions } from "../../common/hooks/useMemberFilterOptions"; // 新しいフック
+import { useMemberFilteringAndSorting } from "../../common/hooks/useMemberFilteringAndSorting"; // 新しいフック
+import { groupMembersByFiscalYear } from "../../common/utils/memberGrouping"; // 新しいユーティリティ
+import { getMemberDisplayGroupName } from "../../common/utils/memberUtils"; // getMemberDisplayGroupNameをインポート
 
 const groupColors = {
   "乃木坂46": "#812990",
@@ -15,98 +19,32 @@ const MemberListByYear = () => {
   const { data, loading, error } = useSakamichiMasterDataContext();
   const [displayMode, setDisplayMode] = useState("multi-column");
 
-  // Hooksは必ずコンポーネントの先頭で呼び出す
   const allMembers = useMemo(() => (data && data.members) ? data.members : [], [data]);
-  const links = allMembers;
+  const groupMap = data?.groupMap || {}; // groupMapも取得
 
-  const joinPeriods = useMemo(() => {
-    const periods = {};
-    allMembers.forEach((member) => {
-      const groupName = member.グループ名?.trim();
-      if (!groupName) return;
-      const joinPeriod = member.加入期?.match(/\d+/)?.[0] || "1";
-      if (!periods[groupName]) periods[groupName] = new Set();
-      periods[groupName].add(joinPeriod);
-    });
-    Object.keys(periods).forEach((group) => {
-      periods[group] = Array.from(periods[group]).sort(
-        (a, b) => parseInt(a.match(/\d+/)?.[0] || "1") - parseInt(b.match(/\d+/)?.[0] || "1")
-      );
-    });
-    return periods;
+  // フィルターオプションを生成するフック
+  const { joinPeriods, initialFilters } = useMemberFilterOptions(allMembers);
+
+  // フィルターとソートロジックを管理するフック
+  const { filters, setFilters, toggleFilter, filteredMembers } = useMemberFilteringAndSorting(
+    allMembers,
+    groupMap,
+    initialFilters
+  );
+
+  // フィルタリングされたメンバーを年度別にグループ化
+  // membersByYear は GroupList に渡すための、全メンバーからフィルタリングされたものを年度別にグループ化したもの
+  const membersByYear = useMemo(() => { // allMembersから直接グループ化
+    return groupMembersByFiscalYear(allMembers);
   }, [allMembers]);
 
-  const initialFilters = useMemo(() => {
-    const filters = {};
-    Object.keys(joinPeriods).forEach((group) => {
-      filters[group] = {
-        active: true,
-        graduated: true,
-      };
-      joinPeriods[group].forEach((period) => {
-        filters[group][period] = true;
-      });
-    });
-    return filters;
-  }, [joinPeriods]);
+  // sortedAndFilteredAllMembers は全グループ一括表示用
+  // useMemberFilteringAndSorting から返される filteredMembers をそのまま使用
+  const sortedAndFilteredAllMembers = filteredMembers;
 
-  const [filters, setFilters] = useState(initialFilters);
-
-  const toggleFilter = (group, key) => {
-    setFilters((prevFilters) => ({
-      ...prevFilters,
-      [group]: {
-        ...prevFilters[group],
-        [key]: !prevFilters[group][key],
-      },
-    }));
-  };
-
-  const membersByYear = useMemo(() => {
-    const groupedData = allMembers.reduce((acc, member) => {
-      const groupName = member.グループ名?.trim();
-      if (!groupName) return acc;
-      const birthDate = new Date(member.生年月日);
-      if (isNaN(birthDate.getTime())) return acc;
-      const year = birthDate.getMonth() + 1 >= 4 ? birthDate.getFullYear() : birthDate.getFullYear() - 1;
-      if (!acc[year]) acc[year] = [];
-      acc[year].push(member);
-      return acc;
-    }, {});
-    Object.keys(groupedData).forEach((year) => {
-      groupedData[year].sort((a, b) => new Date(a.生年月日) - new Date(b.生年月日));
-    });
-    return groupedData;
-  }, [allMembers]);
-
-  const sortedAndFilteredAllMembers = useMemo(() => {
-    let filteredMembers = allMembers.filter((member) => {
-      const groupName = member.グループ名?.trim();
-      if (!groupName || !filters[groupName]) return false;
-      const joinPeriod = member.加入期?.match(/\d+/)?.[0] || "1";
-      const isActive =
-        member["卒業・辞退・契約終了日"] === "-" ||
-        new Date(member["卒業・辞退・契約終了日"]) > new Date();
-      return (
-        (filters[groupName]?.[joinPeriod] ?? false) &&
-        (
-          ((filters[groupName]?.active ?? false) && isActive) ||
-          ((filters[groupName]?.graduated ?? false) && !isActive)
-        )
-      );
-    });
-    filteredMembers.sort((a, b) => new Date(a.生年月日) - new Date(b.生年月日));
-    return filteredMembers;
-  }, [allMembers, filters]);
-
+  // 全グループ一括表示用に、フィルタリングされたメンバーを年度別にグループ化
   const groupedAllMembersByYear = useMemo(() => {
-    return sortedAndFilteredAllMembers.reduce((acc, member) => {
-      const birthDate = new Date(member.生年月日);
-      const year = birthDate.getMonth() + 1 >= 4 ? birthDate.getFullYear() : birthDate.getFullYear() - 1;
-      if (!acc[year]) acc[year] = [];
-      acc[year].push(member);
-      return acc;
-    }, {});
+    return groupMembersByFiscalYear(sortedAndFilteredAllMembers);
   }, [sortedAndFilteredAllMembers]);
 
   // ここより下は既存のまま
@@ -222,23 +160,13 @@ const MemberListByYear = () => {
       {displayMode === "multi-column" ? (
         // グループ別表示
         Object.keys(membersByYear)
-          .filter((year) => {
-            const hasMembers = membersByYear[year].some((member) => {
-              const groupName = member.グループ名?.trim();
-              if (!groupName || !filters[groupName]) return false;
-              const joinPeriod = member.加入期?.match(/\d+/)?.[0] || "1";
-              const isActive =
-                member["卒業・辞退・契約終了日"] === "-" ||
-                new Date(member["卒業・辞退・契約終了日"]) > new Date();
-              return (
-                (filters[groupName]?.[joinPeriod] ?? false) &&
-                (
-                  ((filters[groupName]?.active ?? false) && isActive) ||
-                  ((filters[groupName]?.graduated ?? false) && !isActive)
-                )
-              );
-            });
-            return hasMembers;
+          // membersByYearは全メンバーを年度別にグループ化したものなので、
+          // ここでフィルターを適用して表示する年度を決定する
+          .filter(year => {
+            // その年度のメンバーが、現在のフィルター条件で一人でも表示されるかチェック
+            return membersByYear[year].some(member =>
+              filteredMembers.includes(member) // filteredMembersに含まれているか
+            );
           })
           .sort((a, b) => a - b)
           .map((year) => (
@@ -247,9 +175,9 @@ const MemberListByYear = () => {
                 {year}年度生まれ
               </h2>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <GroupList members={membersByYear[year]} groupName="乃木坂46" filters={filters["乃木坂46"] || {}} />
-                <GroupList members={membersByYear[year]} groupName="櫻坂46" filters={filters["櫻坂46"] || {}} />
-                <GroupList members={membersByYear[year]} groupName="日向坂46" filters={filters["日向坂46"] || {}} />
+                <GroupList members={membersByYear[year]} groupName="乃木坂46" filters={filters["乃木坂46"] || {}} groupMap={groupMap} />
+                <GroupList members={membersByYear[year]} groupName="櫻坂46" filters={filters["櫻坂46"] || {}} groupMap={groupMap} />
+                <GroupList members={membersByYear[year]} groupName="日向坂46" filters={filters["日向坂46"] || {}} groupMap={groupMap} />
               </div>
             </div>
           ))
@@ -268,7 +196,7 @@ const MemberListByYear = () => {
                     <MemberCard
                       key={member.key}
                       member={member}
-                      displayGroupName={member.グループ名}
+                      displayGroupName={getMemberDisplayGroupName(member, groupMap, new Date())} // 変更
                     />
                   ))}
                 </ul>

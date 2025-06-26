@@ -6,6 +6,7 @@ import MemberListByYear from "./features/member-list/components/MemberListByYear
 import MemberTransition from "./features/member-transition/components/MemberTransition";
 import TVInfo from "./features/tv-info/components/TVInfo";
 import './App.css';
+import { getMemberDisplayGroupName } from "./features/common/utils/memberUtils";
 
 const RubiksCube = lazy(() => import("./features/rubiks-cube/components/RubiksCube"));
 
@@ -89,8 +90,13 @@ function MasterDataDebugger() {
       console.log("Sakamichi Master Data:", data);
       const testTargetName = "遠藤さくら";
       const targetMember = data.members.find(member => member.名前 === testTargetName);
-      console.log(testTargetName + " : " + targetMember.getCorrectGroupName(new Date()));
-    }
+      if (targetMember) {
+        // ユーティリティ関数 getMemberDisplayGroupName を使用するように修正
+        console.log(testTargetName + " : " + getMemberDisplayGroupName(targetMember, data.groupMap, new Date()));
+      } else {
+        // メンバーが見つからなかった場合のログ
+        console.log(`メンバー「${testTargetName}」は見つかりませんでした。`);
+      }    }
     if (error) {
       console.error("Sakamichi Master Data Load Error:", error);
     }

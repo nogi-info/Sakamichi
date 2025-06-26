@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useMemo } from "react";
 import Layout from "../../../styles/Layout";
 import MemberCard from "../../member-list/components/MemberCard";
 import './Home.css';
 import { useSakamichiMasterDataContext } from "../../common/SakamichiMasterDataContext";
+import { useBirthdayMembers } from "../../common/hooks/useBirthdayMembers";
+import { getMemberDisplayGroupName } from "../../common/utils/memberUtils"; // 追加
 
 const Home = () => {
   // マスターデータをContextから取得
@@ -24,49 +26,8 @@ const Home = () => {
     );
   }, [data]);
 
-  // 誕生日メンバーの抽出
-  const [birthdayMembersToday, setBirthdayMembersToday] = useState([]);
-  const [birthdayMembersThisMonth, setBirthdayMembersThisMonth] = useState([]);
-
-  useEffect(() => {
-    if (!allMembers.length) return;
-
-    const today = new Date();
-    const currentMonth = today.getMonth(); // 0-11
-    const currentDay = today.getDate(); // 1-31
-
-    // デバッグ用
-    // const currentMonth = 5;
-    // const currentDay = 8;
-
-    const todayBirthdays = [];
-    const thisMonthBirthdays = [];
-
-    allMembers.forEach(member => {
-      const birthDate = new Date(member.生年月日);
-      if (isNaN(birthDate.getTime())) return;
-
-      const memberMonth = birthDate.getMonth();
-      const memberDay = birthDate.getDate();
-
-      if (memberMonth === currentMonth) {
-        thisMonthBirthdays.push(member);
-        if (memberDay === currentDay) {
-          todayBirthdays.push(member);
-        }
-      }
-    });
-
-    thisMonthBirthdays.sort((a, b) => {
-      const dateA = new Date(a.生年月日);
-      const dateB = new Date(b.生年月日);
-      return dateA.getDate() - dateB.getDate();
-    });
-
-    setBirthdayMembersToday(todayBirthdays);
-    setBirthdayMembersThisMonth(thisMonthBirthdays);
-
-  }, [allMembers]);
+  // 誕生日メンバーをカスタムフックで取得
+  const { birthdayMembersToday, birthdayMembersThisMonth } = useBirthdayMembers(allMembers);
 
   if (loading) {
     return <Layout><div>Loading...</div></Layout>;
@@ -98,7 +59,7 @@ const Home = () => {
                 <MemberCard
                   key={member.key}
                   member={member} 
-                  displayGroupName={member.getCorrectGroupName(new Date())}
+                  displayGroupName={getMemberDisplayGroupName(member, data.groupMap, new Date())} // 変更
                   isBirthdayToday={true}
                   initialExpanded={true}
                 />
@@ -116,7 +77,7 @@ const Home = () => {
                 <MemberCard
                   key={member.key}
                   member={member} 
-                  displayGroupName={member.getCorrectGroupName(new Date())} 
+                  displayGroupName={getMemberDisplayGroupName(member, data.groupMap, new Date())} // 変更
                 />
               ))}
             </ul>

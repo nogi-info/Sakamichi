@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FaLink } from "react-icons/fa";
+import { calculateAge } from "../../common/utils/memberUtils";
 
 const groupColors = {
   "乃木坂46": "#812990",
@@ -14,17 +15,6 @@ const getJoinPeriodColor = (groupName, joinPeriod) => {
   if (!baseColor) return "#ccc";
   const opacity = 1 - (parseInt(joinPeriod, 10) - 1) * 0.1;
   return `${baseColor}${Math.round(opacity * 255).toString(16).padStart(2, "0")}`;
-};
-
-const calculateAge = (birthDate) => {
-  const today = new Date();
-  const birth = new Date(birthDate);
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-    age--;
-  }
-  return age;
 };
 
 // isBirthdayToday と groupData プロパティを追加
