@@ -13,6 +13,8 @@ def run_script(script_name):
             check=True,
             capture_output=True,
             text=True,
+            encoding='utf-8',
+            errors='replace',
             cwd=CURRENT_DIR
         )
         print(result.stdout)

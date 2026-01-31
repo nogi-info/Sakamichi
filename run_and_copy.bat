@@ -1,7 +1,12 @@
 @echo off
 setlocal
+chcp 65001 > nul
+set PYTHONIOENCODING=utf-8
 
 echo --- Running Python scripts ---
+rem 仮想環境を有効化
+call .venv\Scripts\activate.bat
+
 rem backendフォルダに移動してrun_all.pyを実行
 cd backend
 python run_all.py
