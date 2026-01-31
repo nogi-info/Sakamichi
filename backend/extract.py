@@ -4,6 +4,13 @@ import pandas as pd
 import os
 import io # 追加: StringIOを使用する場合
 import re # reモジュールを追加
+import time
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
 
 # スクリプトの現在のディレクトリを取得し、そこに移動
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -44,19 +51,66 @@ for key in target_titles.keys():
     sub_dir = os.path.join(output_dir, key)
     os.makedirs(sub_dir, exist_ok=True)
 
-# 各URLを処理 (変更なし)
+# 各URLを処理
 for page_title, url in urls.items():
     print(f"Processing: {page_title} ({url})")
 
-    response = requests.get(url)
-    response.encoding = response.apparent_encoding
-    soup = BeautifulSoup(response.text, 'html.parser')
+    # Seleniumでページを読み込む
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless')  # バックグラウンド実行
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=options
+    )
+    
+    try:
+        driver.get(url)
+        # ページが完全に読み込まれるまで待機（最大10秒）
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".mw-heading"))
+            )
+        except:
+            pass  # タイムアウトしても続行
+        time.sleep(2)  # 追加の待機時間
+        
+        # JavaScriptレンダリング後のHTMLを取得
+        html_content = driver.page_source
+        soup = BeautifulSoup(html_content, 'html.parser')
+    finally:
+        driver.quit()
 
     for key, titles in target_titles.items():
         output_subdir = os.path.join(output_dir, key)
         # 各タイトルに対して処理
         for title in titles:
+            # mw-heading内のh3またはspanを探す
+            header = None
+            
+            # 方法1: 直接h3のid属性で探す
             header = soup.find('h3', {'id': title})
+            
+            # 方法2: mw-heading div内のテキストで探す
+            if not header:
+                for div in soup.find_all('div', class_=lambda x: x and 'mw-heading' in x):
+                    h3 = div.find('h3')
+                    if h3 and h3.get_text(strip=True) == title:
+                        header = h3
+                        break
+            
+            # 方法3: spanタグで探す（Wikipedia新形式対応）
+            if not header:
+                for span in soup.find_all('span', class_='mw-headline'):
+                    if span.get_text(strip=True) == title:
+                        # 親のh3またはh2を取得
+                        parent = span.parent
+                        if parent and parent.name in ['h2', 'h3', 'h4', 'h5']:
+                            header = parent
+                            break
+            
             if header:
                 current_element = header
                 # 複数テーブルに対応

@@ -51,15 +51,27 @@ for file in csv_files:
         group_name = "不明"
 
     df = pd.read_csv(file)
-    df = df.rename(columns={"現在の所属事務所": "現在の所属事務所ほか"})
-    df = df.rename(columns={"最終在籍日": "卒業・辞退・契約終了日"})
+    
+    # 列名の統一化：複数のパターンを対応
+    # 「現在の所属事務所」「卒業後の所属」などを「現在の所属事務所ほか」に統一
+    if "現在の所属事務所" in df.columns:
+        df = df.rename(columns={"現在の所属事務所": "現在の所属事務所ほか"})
+    elif "卒業後の所属" in df.columns:
+        df = df.rename(columns={"卒業後の所属": "現在の所属事務所ほか"})
+    
+    if "最終在籍日" in df.columns:
+        df = df.rename(columns={"最終在籍日": "卒業・辞退・契約終了日"})
 
-    if "卒業・辞退・契約終了日" in df.columns:
-        df = df[["名前", "よみ", "生年月日", "出身地", "血液型", "身長", "加入期", "卒業・辞退・契約終了日", "現在の所属事務所ほか"]]
-    else:
-        df = df[["名前", "よみ", "生年月日", "出身地", "血液型", "身長", "加入期"]]
-        df["卒業・辞退・契約終了日"] = "-"
-        df["現在の所属事務所ほか"] = "-"
+    # 必要な列を選択（存在する列のみ）
+    required_columns = ["名前", "よみ", "生年月日", "出身地", "血液型", "身長", "加入期", "卒業・辞退・契約終了日", "現在の所属事務所ほか"]
+    existing_columns = [col for col in required_columns if col in df.columns]
+    
+    # 不足している列を追加
+    for col in required_columns:
+        if col not in df.columns:
+            df[col] = "-"
+    
+    df = df[existing_columns + [col for col in required_columns if col not in existing_columns]]
 
     df.insert(0, "グループ名", group_name)
     df["生年月日"] = df["生年月日"].apply(lambda x: re.search(r"\d{4}年\d{1,2}月\d{1,2}日", str(x)))
