@@ -1,21 +1,21 @@
 {
   "files": {
     "main.css": "/Sakamichi/static/css/main.ad8bb9f0.css",
-    "main.js": "/Sakamichi/static/js/main.17eb30cd.js",
+    "main.js": "/Sakamichi/static/js/main.eb7bded2.js",
     "static/css/315.0e5eba42.chunk.css": "/Sakamichi/static/css/315.0e5eba42.chunk.css",
-    "static/js/315.a75991e7.chunk.js": "/Sakamichi/static/js/315.a75991e7.chunk.js",
+    "static/js/315.437fa72d.chunk.js": "/Sakamichi/static/js/315.437fa72d.chunk.js",
     "static/js/453.8ab44547.chunk.js": "/Sakamichi/static/js/453.8ab44547.chunk.js",
     "static/js/419.9fed9522.chunk.js": "/Sakamichi/static/js/419.9fed9522.chunk.js",
     "index.html": "/Sakamichi/index.html",
     "main.ad8bb9f0.css.map": "/Sakamichi/static/css/main.ad8bb9f0.css.map",
-    "main.17eb30cd.js.map": "/Sakamichi/static/js/main.17eb30cd.js.map",
+    "main.eb7bded2.js.map": "/Sakamichi/static/js/main.eb7bded2.js.map",
     "315.0e5eba42.chunk.css.map": "/Sakamichi/static/css/315.0e5eba42.chunk.css.map",
-    "315.a75991e7.chunk.js.map": "/Sakamichi/static/js/315.a75991e7.chunk.js.map",
+    "315.437fa72d.chunk.js.map": "/Sakamichi/static/js/315.437fa72d.chunk.js.map",
     "453.8ab44547.chunk.js.map": "/Sakamichi/static/js/453.8ab44547.chunk.js.map",
     "419.9fed9522.chunk.js.map": "/Sakamichi/static/js/419.9fed9522.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.ad8bb9f0.css",
-    "static/js/main.17eb30cd.js"
+    "static/js/main.eb7bded2.js"
   ]
 }
